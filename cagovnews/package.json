@@ -1,0 +1,24 @@
+{
+  "name": "cagovnews-crawler",
+  "version": "1.0.0",
+  "description": "Daily crawler and backend for cagovnews.com — California .gov press release aggregator",
+  "type": "module",
+  "main": "crawler.js",
+  "scripts": {
+    "crawl": "node crawler.js",
+    "crawl:dry": "DRY_RUN=true node crawler.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "cheerio": "^1.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
