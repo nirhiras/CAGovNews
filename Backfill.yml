@@ -1,0 +1,32 @@
+name: Backfill Article Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      agency:
+        description: 'Single agency slug to backfill (leave blank for all)'
+        required: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: cagovnews
+        run: npm install
+
+      - name: Run backfill
+        working-directory: cagovnews
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          AGENCY_FILTER: ${{ github.event.inputs.agency }}
+        run: node backfill.js
