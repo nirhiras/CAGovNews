@@ -19,13 +19,15 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: cagovnews/package-lock.json
-      - run: npm ci
+          node-version: '22'
+
+      - name: Install dependencies
         working-directory: cagovnews
+        run: npm install
+
       - name: Run crawler
         working-directory: cagovnews
         env:
@@ -35,6 +37,7 @@ jobs:
           AGENCY_FILTER: ${{ github.event.inputs.agency }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: node crawler.js
+
       - name: Notify on failure
         if: failure()
         run: |
@@ -45,5 +48,5 @@ jobs:
               "from": "alerts@cagovnews.com",
               "to": ["${{ secrets.ADMIN_EMAIL }}"],
               "subject": "CAGovNews crawler failed",
-              "html": "<p>The daily crawler failed. <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View logs</a></p>"
+              "html": "<p>Crawler failed. <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View logs</a></p>"
             }'
