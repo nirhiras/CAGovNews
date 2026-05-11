@@ -26,56 +26,192 @@ const AGENCY_FILTER = process.env.AGENCY_FILTER || null;
 
 // ── Agency list ────────────────────────────────────────────────
 const AGENCIES = [
-  { slug: 'Governor',     news_url: 'https://www.gov.ca.gov/newsroom/' },
-  { slug: 'CDPH',         news_url: 'https://www.cdph.ca.gov/Programs/OPA/Pages/News-Releases-2026.aspx' },
-  { slug: 'DOJ',          news_url: 'https://oag.ca.gov/news' },
-  { slug: 'DOF',          news_url: 'https://dof.ca.gov/budget/resources-for-departments/budget-letters/' },
-  { slug: 'Caltrans',     news_url: 'https://dot.ca.gov/news-releases' },
-  { slug: 'CARB',         news_url: 'https://ww2.arb.ca.gov/news' },
-  { slug: 'CEC',          news_url: 'https://www.energy.ca.gov/newsroom/news-releases' },
-  { slug: 'CPUC',         news_url: 'https://www.cpuc.ca.gov/news-and-updates/all-news' },
-  { slug: 'DMV',          news_url: 'https://www.dmv.ca.gov/portal/news-and-media/news-releases/' },
-  { slug: 'DMHC',         news_url: 'https://www.dmhc.ca.gov/Resources/Newsroom/PressReleases.aspx' },
-  { slug: 'Insurance',    news_url: 'https://www.insurance.ca.gov/0400-news/0100-press-releases/2026/' },
-  { slug: 'DFPI',         news_url: 'https://dfpi.ca.gov/news/' },
-  { slug: 'DTSC',         news_url: 'https://dtsc.ca.gov/news/' },
-  { slug: 'CalPrivacy',   news_url: 'https://cppa.ca.gov/announcements/' },
-  { slug: 'FPPC',         news_url: 'https://www.fppc.ca.gov/news-releases.html' },
-  { slug: 'EDD',          news_url: 'https://www.edd.ca.gov/about_edd/newsreleases.htm' },
-  { slug: 'Controller',   news_url: 'https://www.sco.ca.gov/eo_pressrel.html' },
-  { slug: 'Treasurer',    news_url: 'https://www.treasurer.ca.gov/news/releases.asp' },
-  { slug: 'Sec. of State',news_url: 'https://www.sos.ca.gov/administration/news-releases-and-advisories/2026-news-releases-and-advisories' },
-  { slug: 'CDE',          news_url: 'https://www.cde.ca.gov/nr/ne/yr26/' },
-  { slug: 'DHCS',         news_url: 'https://www.dhcs.ca.gov/Documents/DHCS-Press-Releases.aspx' },
-  { slug: 'HCD',          news_url: 'https://www.hcd.ca.gov/about/newsroom/press-releases' },
-  { slug: 'CalHFA',       news_url: 'https://www.calhfa.ca.gov/about/newsroom/' },
-  { slug: 'CalRecycle',   news_url: 'https://www2.calrecycle.ca.gov/NewsRoom' },
-  { slug: 'Water Board',  news_url: 'https://www.waterboards.ca.gov/press_room/press_releases/2026/' },
-  { slug: 'OTS',          news_url: 'https://www.ots.ca.gov/media-and-research/news-releases/' },
-  { slug: 'CDT',          news_url: 'https://cdt.ca.gov/news/' },
-  { slug: 'DGS',          news_url: 'https://www.dgs.ca.gov/PD/News' },
-  { slug: 'CalPERS',      news_url: 'https://www.calpers.ca.gov/page/newsroom/calpers-news' },
-  { slug: 'FTB',          news_url: 'https://www.ftb.ca.gov/about-ftb/newsroom/news-releases/' },
-  { slug: 'Parks',        news_url: 'https://www.parks.ca.gov/Newsroom' },
-  { slug: 'CDFA',         news_url: 'https://pressreleases.cdfa.ca.gov/' },
-  { slug: 'DPR',          news_url: 'https://www.cdpr.ca.gov/docs/pressrls/2026prs.htm' },
-  { slug: 'CSAC',         news_url: 'https://www.csac.ca.gov/news-releases' },
-  { slug: 'Cal OES',      news_url: 'https://www.caloes.ca.gov/news-release/' },
-  { slug: 'OTSI',         news_url: 'https://otsi.ca.gov/' },
-  { slug: 'ABC',          news_url: 'https://www.abc.ca.gov/news-releases/' },
-  { slug: 'CDA',          news_url: 'https://aging.ca.gov/newsroom/' },
-  { slug: 'CRD',          news_url: 'https://calcivilrights.ca.gov/news/' },
-  { slug: 'CalHR',        news_url: 'https://www.calhr.ca.gov/newsroom/' },
-  { slug: 'DCC',          news_url: 'https://www.cannabis.ca.gov/press-releases/' },
-  { slug: 'OEHHA',        news_url: 'https://oehha.ca.gov/public-information/press-releases' },
-  { slug: 'Energy Safety',news_url: 'https://energysafety.ca.gov/news/' },
-  { slug: 'CDCR',         news_url: 'https://www.cdcr.ca.gov/news/' },
+  { slug: 'Governor',      news_url: 'https://www.gov.ca.gov/newsroom/' },
+  { slug: 'CDPH',          news_url: 'https://www.cdph.ca.gov/Programs/OPA/Pages/News-Releases-2026.aspx' },
+  { slug: 'DOJ',           news_url: 'https://oag.ca.gov/news' },
+  { slug: 'DOF',           news_url: 'https://dof.ca.gov/budget/resources-for-departments/budget-letters/' },
+  { slug: 'Caltrans',      news_url: 'https://dot.ca.gov/news-releases' },
+  { slug: 'CARB',          news_url: 'https://ww2.arb.ca.gov/news' },
+  { slug: 'CEC',           news_url: 'https://www.energy.ca.gov/newsroom/news-releases' },
+  { slug: 'CPUC',          news_url: 'https://www.cpuc.ca.gov/news-and-updates/all-news' },
+  { slug: 'DMV',           news_url: 'https://www.dmv.ca.gov/portal/news-and-media/news-releases/' },
+  { slug: 'DMHC',          news_url: 'https://www.dmhc.ca.gov/Resources/Newsroom/PressReleases.aspx' },
+  { slug: 'Insurance',     news_url: 'https://www.insurance.ca.gov/0400-news/0100-press-releases/2026/' },
+  { slug: 'DFPI',          news_url: 'https://dfpi.ca.gov/news/' },
+  { slug: 'DTSC',          news_url: 'https://dtsc.ca.gov/news/' },
+  { slug: 'CalPrivacy',    news_url: 'https://cppa.ca.gov/announcements/' },
+  { slug: 'FPPC',          news_url: 'https://www.fppc.ca.gov/news-releases.html' },
+  { slug: 'EDD',           news_url: 'https://www.edd.ca.gov/about_edd/newsreleases.htm' },
+  { slug: 'Controller',    news_url: 'https://www.sco.ca.gov/eo_pressrel.html' },
+  { slug: 'Treasurer',     news_url: 'https://www.treasurer.ca.gov/news/releases.asp' },
+  { slug: 'Sec. of State', news_url: 'https://www.sos.ca.gov/administration/news-releases-and-advisories/2026-news-releases-and-advisories' },
+  { slug: 'CDE',           news_url: 'https://www.cde.ca.gov/nr/ne/yr26/' },
+  { slug: 'DHCS',          news_url: 'https://www.dhcs.ca.gov/Documents/DHCS-Press-Releases.aspx' },
+  { slug: 'HCD',           news_url: 'https://www.hcd.ca.gov/about/newsroom/press-releases' },
+  { slug: 'CalHFA',        news_url: 'https://www.calhfa.ca.gov/about/newsroom/' },
+  { slug: 'CalRecycle',    news_url: 'https://www2.calrecycle.ca.gov/NewsRoom' },
+  { slug: 'Water Board',   news_url: 'https://www.waterboards.ca.gov/press_room/press_releases/2026/' },
+  { slug: 'OTS',           news_url: 'https://www.ots.ca.gov/media-and-research/news-releases/' },
+  { slug: 'CDT',           news_url: 'https://cdt.ca.gov/news/' },
+  { slug: 'DGS',           news_url: 'https://www.dgs.ca.gov/PD/News' },
+  { slug: 'CalPERS',       news_url: 'https://www.calpers.ca.gov/page/newsroom/calpers-news' },
+  { slug: 'FTB',           news_url: 'https://www.ftb.ca.gov/about-ftb/newsroom/news-releases/' },
+  { slug: 'Parks',         news_url: 'https://www.parks.ca.gov/Newsroom' },
+  { slug: 'CDFA',          news_url: 'https://pressreleases.cdfa.ca.gov/' },
+  { slug: 'DPR',           news_url: 'https://www.cdpr.ca.gov/docs/pressrls/2026prs.htm' },
+  { slug: 'CSAC',          news_url: 'https://www.csac.ca.gov/news-releases' },
+  { slug: 'Cal OES',       news_url: 'https://www.caloes.ca.gov/news-release/' },
+  { slug: 'OTSI',          news_url: 'https://otsi.ca.gov/' },
+  { slug: 'ABC',           news_url: 'https://www.abc.ca.gov/news-releases/' },
+  { slug: 'CDA',           news_url: 'https://aging.ca.gov/newsroom/' },
+  { slug: 'CRD',           news_url: 'https://calcivilrights.ca.gov/news/' },
+  { slug: 'CalHR',         news_url: 'https://www.calhr.ca.gov/newsroom/' },
+  { slug: 'DCC',           news_url: 'https://www.cannabis.ca.gov/press-releases/' },
+  { slug: 'OEHHA',         news_url: 'https://oehha.ca.gov/public-information/press-releases' },
+  { slug: 'Energy Safety', news_url: 'https://energysafety.ca.gov/news/' },
+  { slug: 'CDCR',          news_url: 'https://www.cdcr.ca.gov/news/' },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const sha256 = (text) =>
   crypto.createHash('sha256').update(text ?? '').digest('hex');
+
+// ── Parse a date string safely, return YYYY-MM-DD or null ─────
+function parseDate(str) {
+  if (!str) return null;
+  try {
+    const cleaned = str.trim()
+      .replace(/^Published:?\s*/i, '')
+      .replace(/^Date:?\s*/i, '')
+      .replace(/^Posted:?\s*/i, '');
+    const d = new Date(cleaned);
+    if (isNaN(d)) return null;
+    const year = d.getFullYear();
+    if (year < 2020 || year > 2030) return null;
+    return d.toISOString().split('T')[0];
+  } catch {
+    return null;
+  }
+}
+
+// ── Extract publish date from URL path ────────────────────────
+// Handles /2026/04/15/ and /2026/04/ patterns
+function extractDateFromUrl(url) {
+  const fullMatch = url.match(/\/(20\d{2})\/(\d{2})\/(\d{2})\//);
+  if (fullMatch) {
+    const [, year, month, day] = fullMatch;
+    return parseDate(`${year}-${month}-${day}`);
+  }
+  const monthMatch = url.match(/\/(20\d{2})\/(\d{2})\//);
+  if (monthMatch) {
+    const [, year, month] = monthMatch;
+    return parseDate(`${year}-${month}-01`);
+  }
+  return null;
+}
+
+// ── Extract publish date from HTML — 8 strategies ─────────────
+function extractPublishDate($, bodyText, sourceUrl = '') {
+  // Strategy 1: OpenGraph / standard meta tags (most reliable)
+  const metaCandidates = [
+    $('meta[property="article:published_time"]').attr('content'),
+    $('meta[name="article:published_time"]').attr('content'),
+    $('meta[property="og:updated_time"]').attr('content'),
+    $('meta[name="date"]').attr('content'),
+    $('meta[name="publishdate"]').attr('content'),
+    $('meta[name="publish-date"]').attr('content'),
+    $('meta[name="DC.date"]').attr('content'),
+    $('meta[itemprop="datePublished"]').attr('content'),
+    $('[itemprop="datePublished"]').attr('content') ||
+    $('[itemprop="datePublished"]').text(),
+  ];
+  for (const val of metaCandidates) {
+    const parsed = parseDate(val);
+    if (parsed) return parsed;
+  }
+
+  // Strategy 2: <time> element datetime attribute
+  const timeDateTime = $('time[datetime]').first().attr('datetime');
+  if (timeDateTime) {
+    const parsed = parseDate(timeDateTime);
+    if (parsed) return parsed;
+  }
+
+  // Strategy 3: JSON-LD structured data
+  let jsonLdDate = null;
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (jsonLdDate) return;
+    try {
+      const json = JSON.parse($(el).html() || '{}');
+      const candidates = [
+        json.datePublished,
+        json.dateCreated,
+        json.dateModified,
+        json['@graph']?.[0]?.datePublished,
+      ];
+      for (const c of candidates) {
+        const parsed = parseDate(c);
+        if (parsed) { jsonLdDate = parsed; return; }
+      }
+    } catch { /* ignore */ }
+  });
+  if (jsonLdDate) return jsonLdDate;
+
+  // Strategy 4: Common .gov date CSS selectors
+  const dateSelectors = [
+    '.date', '.publish-date', '.published-date', '.post-date',
+    '.entry-date', '.article-date', '.news-date', '.release-date',
+    '.field-name-post-date', '.date-display-single', '.submitted',
+    '.byline', '.dateline', '.timestamp', '.article-timestamp',
+    '[class*="publish"]', '[class*="release-date"]',
+  ];
+  for (const sel of dateSelectors) {
+    const text = $(sel).first().text().trim();
+    if (text && text.length < 80) {
+      const parsed = parseDate(text);
+      if (parsed) return parsed;
+    }
+  }
+
+  // Strategy 5: "FOR IMMEDIATE RELEASE" dateline
+  const immediateMatch = bodyText.match(
+    /FOR\s+IMMEDIATE\s+RELEASE[:\s]*[\r\n]+\s*([A-Z][a-z]+ \d{1,2},\s*20\d{2})/i
+  );
+  if (immediateMatch) {
+    const parsed = parseDate(immediateMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  // Strategy 6: "SACRAMENTO –" dateline
+  const sacMatch = bodyText.match(
+    /SACRAMENTO\s*[–\-—,]\s*([A-Z][a-z]+ \d{1,2},?\s*20\d{2})/i
+  );
+  if (sacMatch) {
+    const parsed = parseDate(sacMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  // Strategy 7: Date from URL
+  const urlDate = extractDateFromUrl(sourceUrl);
+  if (urlDate) return urlDate;
+
+  // Strategy 8: Generic date pattern in body text (last resort)
+  const genericPatterns = [
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*20\d{2}\b/i,
+    /\b20\d{2}-\d{2}-\d{2}\b/,
+    /\b\d{1,2}\/\d{1,2}\/20\d{2}\b/,
+  ];
+  for (const pattern of genericPatterns) {
+    const match = bodyText.match(pattern);
+    if (match) {
+      const parsed = parseDate(match[0]);
+      if (parsed) return parsed;
+    }
+  }
+
+  return null;
+}
 
 async function fetchPage(url, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -98,14 +234,27 @@ async function fetchPage(url, retries = 2) {
   }
 }
 
-function extractContent(html) {
+function extractContent(html, sourceUrl = '') {
   const $ = cheerio.load(html);
-  $('nav,footer,script,style,iframe,.sidebar,.nav,.footer,.menu,#nav,#footer,#header,.header').remove();
 
+  // Remove nav/chrome elements
+  $(
+    'nav, footer, script, style, iframe, ' +
+    '.sidebar, .nav, .footer, .menu, .navigation, .site-nav, ' +
+    '.site-header, .site-footer, .header, .cookie-banner, .alert-bar, ' +
+    '#nav, #footer, #header, #sidebar, #menu, ' +
+    '[role="navigation"], [role="banner"], [role="contentinfo"]'
+  ).remove();
+
+  // Find main content block
   const mainHtml =
     $('article').first().html() ||
     $('main').first().html() ||
-    $('.press-release,.news-release,.content-area,#main-content,.page-content').first().html() ||
+    $(
+      '.press-release, .news-release, .content-area, ' +
+      '#main-content, .page-content, .entry-content, ' +
+      '.post-content, .article-body, .release-body'
+    ).first().html() ||
     $('body').html();
 
   const $m = cheerio.load(mainHtml || html);
@@ -113,33 +262,22 @@ function extractContent(html) {
 
   // Build markdown
   let markdown = '';
-  $m('h1,h2,h3,h4,p,li,blockquote').each((_, el) => {
+  $m('h1, h2, h3, h4, p, li, blockquote').each((_, el) => {
     const tag = el.tagName.toLowerCase();
     const text = $m(el).text().trim();
     if (!text) return;
-    const map = { h1: '# ', h2: '## ', h3: '### ', h4: '#### ', li: '- ', blockquote: '> ' };
-    markdown += (map[tag] || '') + text + '\n\n';
+    const prefix = { h1: '# ', h2: '## ', h3: '### ', h4: '#### ', li: '- ', blockquote: '> ' };
+    markdown += (prefix[tag] || '') + text + '\n\n';
   });
 
-  // Attempt to extract publish date
+  // Extract publish date using all 8 strategies
   const bodyText = $('body').text();
-  const patterns = [/(\w+ \d{1,2},\s*202\d)/i, /202\d-\d{2}-\d{2}/];
-  let publishedDate = null;
-  for (const p of patterns) {
-    const m = bodyText.match(p);
-    if (m) {
-      const d = new Date(m[0]);
-      if (!isNaN(d) && d.getFullYear() >= 2026) {
-        publishedDate = d.toISOString().split('T')[0];
-        break;
-      }
-    }
-  }
+  const publishedDate = extractPublishDate($, bodyText, sourceUrl);
 
   return { extractedText, markdown, publishedDate };
 }
 
-// ── Archive a single article URL ───────────────────────────────
+// ── Archive a single article URL ──────────────────────────────
 async function archiveArticle(releaseId, articleUrl) {
   const { html, status, ok } = await fetchPage(articleUrl);
 
@@ -153,14 +291,14 @@ async function archiveArticle(releaseId, articleUrl) {
         source_still_live: status !== 404 && status !== 410,
       });
     }
-    return;
+    return { publishedDate: null };
   }
 
-  const { extractedText, markdown, publishedDate } = extractContent(html);
+  const { extractedText, markdown, publishedDate } = extractContent(html, articleUrl);
   const hash = sha256(extractedText);
 
   if (!DRY_RUN) {
-    // Check if unchanged
+    // Check if content unchanged since last scrape
     const { data: existing } = await supabase
       .from('release_content')
       .select('content_hash')
@@ -172,9 +310,10 @@ async function archiveArticle(releaseId, articleUrl) {
         .from('release_content')
         .update({ last_checked_at: new Date().toISOString() })
         .eq('release_id', releaseId);
-      return;
+      return { publishedDate };
     }
 
+    // Save full archived content
     await supabase.from('release_content').upsert({
       release_id: releaseId,
       raw_html: html,
@@ -188,7 +327,7 @@ async function archiveArticle(releaseId, articleUrl) {
       source_still_live: true,
     });
 
-    // Update published_date if we extracted one from the article
+    // Update published_date with accurately extracted date
     if (publishedDate) {
       await supabase
         .from('releases')
@@ -197,10 +336,13 @@ async function archiveArticle(releaseId, articleUrl) {
     }
   } else {
     console.log(`    [DRY RUN] Would archive: ${articleUrl.slice(0, 80)}`);
+    if (publishedDate) console.log(`    [DRY RUN] Extracted date: ${publishedDate}`);
   }
+
+  return { publishedDate };
 }
 
-// ── Scrape agency newsroom for article links ───────────────────
+// ── Scrape agency newsroom for article links ──────────────────
 async function scrapeAgencyNewsroom(agency) {
   const { html, ok } = await fetchPage(agency.news_url);
   if (!ok || !html) {
@@ -225,11 +367,8 @@ async function scrapeAgencyNewsroom(agency) {
       return;
     }
 
-    // Must be a .gov URL
     if (!fullUrl.match(/\.gov/)) return;
-    // Skip utility pages
-    if (fullUrl.match(/\/(search|contact|about|privacy|sitemap|login|subscribe|feedback)/i)) return;
-    // Skip already seen
+    if (fullUrl.match(/\/(search|contact|about|privacy|sitemap|login|subscribe|feedback|careers|glossary|faq)/i)) return;
     if (seen.has(fullUrl)) return;
 
     seen.add(fullUrl);
@@ -239,7 +378,7 @@ async function scrapeAgencyNewsroom(agency) {
   return { links };
 }
 
-// ── Main ────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────
 async function runCrawler() {
   console.log('\n🕷️  CAGovNews crawler started:', new Date().toISOString());
   if (DRY_RUN) console.log('   DRY RUN — no database writes\n');
@@ -253,7 +392,6 @@ async function runCrawler() {
     process.exit(1);
   }
 
-  // Open crawl log entry
   let crawlId = null;
   if (!DRY_RUN) {
     const { data } = await supabase
@@ -284,15 +422,17 @@ async function runCrawler() {
 
       for (const link of links) {
         if (!DRY_RUN) {
-          // Upsert release metadata
-          const { data: release, error: upsertErr } = await supabase
+          // Pre-extract date from URL before hitting the article page
+          const urlDate = extractDateFromUrl(link.url);
+
+          const { data: release } = await supabase
             .from('releases')
             .upsert(
               {
                 agency_slug: agency.slug,
                 title: link.title,
                 source_url: link.url,
-                published_date: new Date().toISOString().split('T')[0],
+                published_date: urlDate || new Date().toISOString().split('T')[0],
               },
               { onConflict: 'agency_slug,source_url' }
             )
@@ -306,7 +446,8 @@ async function runCrawler() {
             await delay(1500);
           }
         } else {
-          console.log(`    [DRY] ${link.title.slice(0, 60)}`);
+          const urlDate = extractDateFromUrl(link.url);
+          console.log(`    [DRY] ${link.title.slice(0, 55)} ${urlDate ? `(${urlDate})` : ''}`);
         }
       }
     } catch (err) {
@@ -314,10 +455,9 @@ async function runCrawler() {
       console.error(`  ✗ ${agency.slug}: ${err.message}`);
     }
 
-    await delay(3000); // polite gap between agencies
+    await delay(3000);
   }
 
-  // Close crawl log
   if (!DRY_RUN && crawlId) {
     await supabase.from('crawl_log').update({
       finished_at: new Date().toISOString(),
@@ -330,7 +470,6 @@ async function runCrawler() {
 
   console.log(`\n✅ Done — ${totalNew} new | ${totalFound} found | ${errors.length} errors`);
 
-  // Trigger digest email if new releases exist
   if (totalNew > 0 && !DRY_RUN) {
     await triggerDigest(totalNew);
   }
