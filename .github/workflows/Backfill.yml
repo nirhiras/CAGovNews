@@ -4,8 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       agency:
-        description: 'Single agency slug to backfill (leave blank for all)'
+        description: 'Single agency slug (leave blank for all)'
         required: false
+      force:
+        description: 'Force re-scrape even if content exists (true/false)'
+        required: false
+        default: 'false'
+      dates_only:
+        description: 'Only fix dates from archived HTML — no HTTP (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   backfill:
@@ -29,4 +37,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           AGENCY_FILTER: ${{ github.event.inputs.agency }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+          DATES_ONLY: ${{ github.event.inputs.dates_only || 'false' }}
         run: node backfill.js
