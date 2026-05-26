@@ -28,7 +28,7 @@ const AGENCY_COLORS = {
   'CalHR': '#2e4057', 'DCC': '#145a32', 'OEHHA': '#4d6a1b',
   'Energy Safety': '#935116', 'Parks': '#1d6533', 'CalVet': '#922b21',
   'First 5 CA': '#8e44ad', 'DDS': '#1a5276', 'DGSP': '#2874a6',
-  'FI$Cal': '#1a5276',
+  'FI$Cal': '#1a5276', 'CDCR': '#7b1d1d',
 }
 
 const TAG_STYLES = {
@@ -91,6 +91,15 @@ const STATES = [
   { code: 'TX', name: 'Texas' },
   { code: 'FL', name: 'Florida' },
 ]
+
+// ── localStorage helpers ──────────────────────────────────────
+
+const LS_SAVED    = 'cagov_saved_articles'
+const LS_FAVS     = 'cagov_fav_articles'
+const LS_SEARCHES = 'cagovnews_saved_searches'
+
+function lsGet(key) { try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)) } catch {} }
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -194,7 +203,6 @@ function MultiSelect({ label, options, selected, onChange, placeholder = 'All', 
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4,
           minWidth: 200, maxHeight: 280, overflow: 'hidden', display: 'flex', flexDirection: 'column',
         }}>
-          {/* Search inside dropdown */}
           {options.length > 8 && (
             <div style={{ padding: '8px 10px', borderBottom: '1px solid #f0f0f0' }}>
               <input
@@ -205,14 +213,12 @@ function MultiSelect({ label, options, selected, onChange, placeholder = 'All', 
               />
             </div>
           )}
-          {/* Select all / clear */}
           <div style={{ display: 'flex', gap: 8, padding: '6px 10px', borderBottom: '1px solid #f0f0f0' }}>
             <button onClick={() => onChange(filtered.map(getVal))} style={{ fontSize: 11, color: '#1b3a6b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Select all</button>
             <span style={{ color: '#d1d9e6' }}>|</span>
             <button onClick={() => onChange([])} style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear</button>
             {selected.length > 0 && <span style={{ fontSize: 11, color: '#9aa5b4', marginLeft: 'auto' }}>{selected.length} selected</span>}
           </div>
-          {/* Options list */}
           <div style={{ overflowY: 'auto', maxHeight: 200 }}>
             {filtered.length === 0 ? (
               <div style={{ padding: '12px 10px', fontSize: 12, color: '#9aa5b4', textAlign: 'center' }}>No results</div>
@@ -295,7 +301,6 @@ function DateRangeSelect({ datePreset, dateFrom, dateTo, onChange }) {
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4,
           width: 220, overflow: 'hidden',
         }}>
-          {/* Clear option */}
           <div
             onClick={() => { onChange({ preset: '', from: '', to: '' }); setOpen(false) }}
             style={{ padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: '#6b7280', borderBottom: '1px solid #f0f0f0' }}
@@ -303,7 +308,6 @@ function DateRangeSelect({ datePreset, dateFrom, dateTo, onChange }) {
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >All time</div>
 
-          {/* Presets */}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
             {DATE_PRESETS.filter(p => p.value !== 'custom').map(p => (
               <div
@@ -325,7 +329,6 @@ function DateRangeSelect({ datePreset, dateFrom, dateTo, onChange }) {
             ))}
           </div>
 
-          {/* Custom range */}
           <div style={{ borderTop: '1px solid #f0f0f0', padding: '10px 12px' }}>
             <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6, fontWeight: 600 }}>CUSTOM RANGE</div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -365,7 +368,7 @@ function Chip({ label, onRemove }) {
   )
 }
 
-// ── NewsCard ──────────────────────────────────────────────────
+// ── Badges ────────────────────────────────────────────────────
 
 function AgencyBadge({ slug }) {
   const color = AGENCY_COLORS[slug] ?? '#1a5276'
@@ -377,76 +380,281 @@ function TagBadge({ tag }) {
   return <span style={{ background: bg, color, fontSize: '11px', padding: '3px 8px', borderRadius: '20px', whiteSpace: 'nowrap' }}>{tag}</span>
 }
 
-function NewsCard({ release, onClick }) {
+// ── NewsCard ──────────────────────────────────────────────────
+
+function NewsCard({ release, onClick, isFav, onToggleFav }) {
   const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1a5276'
   return (
     <div
-      onClick={() => onClick(release)}
-      style={{ background: '#fff', border: '0.5px solid #d1d9e6', borderLeft: `3px solid ${agencyColor}`, borderRadius: '0 6px 6px 0', padding: '14px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+      style={{ background: '#fff', border: '0.5px solid #d1d9e6', borderLeft: `3px solid ${agencyColor}`, borderRadius: '0 6px 6px 0', padding: '14px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s', position: 'relative' }}
       onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
       onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px', flexWrap: 'wrap' }}>
-        <AgencyBadge slug={release.agency_slug} />
-        {release.tag && <TagBadge tag={release.tag} />}
-        <span style={{ color: '#9aa5b4', fontSize: '11px', marginLeft: 'auto' }}>{formatDate(release.published_date)}</span>
-      </div>
-      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1b3a6b', lineHeight: 1.4, marginBottom: '5px' }}>{release.title}</div>
-      {release.summary && (
-        <div style={{ fontSize: '12px', color: '#4a5568', lineHeight: 1.6 }}>
-          {release.summary.length > 180 ? release.summary.slice(0, 180) + '…' : release.summary}
+      {/* Favorite star on card */}
+      <button
+        onClick={e => { e.stopPropagation(); onToggleFav(release) }}
+        title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+        style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: isFav ? '#f5a623' : '#d1d9e6', padding: 2, lineHeight: 1 }}
+      >
+        {isFav ? '★' : '☆'}
+      </button>
+      <div onClick={() => onClick(release)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px', flexWrap: 'wrap', paddingRight: 24 }}>
+          <AgencyBadge slug={release.agency_slug} />
+          {release.tag && <TagBadge tag={release.tag} />}
+          <span style={{ color: '#9aa5b4', fontSize: '11px', marginLeft: 'auto' }}>{formatDate(release.published_date)}</span>
         </div>
-      )}
-      <div style={{ marginTop: '8px', fontSize: '11px', color: '#1b3a6b', fontWeight: 500 }}>
-        Read on {release.source_url.replace(/https?:\/\//, '').split('/')[0]} →
+        <div style={{ fontSize: '14px', fontWeight: 600, color: '#1b3a6b', lineHeight: 1.4, marginBottom: '5px' }}>{release.title}</div>
+        {release.summary && (
+          <div style={{ fontSize: '12px', color: '#4a5568', lineHeight: 1.6 }}>
+            {release.summary.length > 180 ? release.summary.slice(0, 180) + '…' : release.summary}
+          </div>
+        )}
+        <div style={{ marginTop: '8px', fontSize: '11px', color: '#1b3a6b', fontWeight: 500 }}>
+          Read on {release.source_url.replace(/https?:\/\//, '').split('/')[0]} →
+        </div>
       </div>
     </div>
   )
 }
 
-function ArticleModal({ release, onClose }) {
-  const [content, setContent] = useState(null)
-  const [loading, setLoading] = useState(true)
+// ── Action bar button ─────────────────────────────────────────
+
+function AbBtn({ onClick, href, target, title, active, activeStyle, children, danger }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    height: 30, padding: '0 10px', fontSize: 12, fontWeight: 500,
+    fontFamily: 'inherit', borderRadius: 6,
+    border: `1px solid ${active ? '#a0b8d8' : '#dde3ec'}`,
+    background: active ? (activeStyle?.bg || '#e8f0fb') : '#f8fafc',
+    color: active ? (activeStyle?.color || '#1b3a6b') : (danger ? '#dc2626' : '#444'),
+    cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap',
+    transition: 'background .12s, color .12s',
+  }
+  if (href) return <a href={href} target={target} rel="noopener noreferrer" title={title} style={base}>{children}</a>
+  return <button onClick={onClick} title={title} style={base}>{children}</button>
+}
+
+// ── Article Modal ─────────────────────────────────────────────
+
+function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favArticles, setFavArticles }) {
+  const [content, setContent]   = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [toast, setToast]       = useState('')
+  const [fbOpen, setFbOpen]     = useState(false)
+  const [fbText, setFbText]     = useState('')
+  const [fbEmail, setFbEmail]   = useState('')
+  const [dlOpen, setDlOpen]     = useState(false)
+  const dlRef                   = useRef(null)
+
+  const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1b3a6b'
+  const url         = release.source_url
+  const title       = release.title
+
+  const isSaved = savedArticles.some(a => a.id === release.id)
+  const isFav   = favArticles.some(a => a.id === release.id)
+
   useEffect(() => {
     supabase.from('release_content').select('extracted_text, scrape_status').eq('release_id', release.id).single()
       .then(({ data }) => { setContent(data); setLoading(false) })
   }, [release.id])
-  const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1b3a6b'
+
+  useEffect(() => {
+    function handler(e) { if (dlRef.current && !dlRef.current.contains(e.target)) setDlOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2600)
+  }
+
+  function handleSave() {
+    if (isSaved) { showToast('Already saved'); return }
+    const updated = [{ id: release.id, title, url, agency: release.agency_slug, tag: release.tag, date: release.published_date, at: new Date().toISOString() }, ...savedArticles]
+    setSavedArticles(updated)
+    lsSet(LS_SAVED, updated)
+    showToast('Article saved ✓')
+  }
+
+  function handleFav() {
+    let updated
+    if (isFav) {
+      updated = favArticles.filter(a => a.id !== release.id)
+      showToast('Removed from favorites')
+    } else {
+      updated = [{ id: release.id, title, url, agency: release.agency_slug, tag: release.tag, date: release.published_date, at: new Date().toISOString() }, ...favArticles]
+      showToast('Added to favorites ★')
+    }
+    setFavArticles(updated)
+    lsSet(LS_FAVS, updated)
+  }
+
+  function handleNativeShare() {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ title, url }).catch(() => {})
+    } else {
+      navigator.clipboard?.writeText(url).then(() => showToast('Link copied ✓'))
+    }
+  }
+
+  function handleFbSend() {
+    if (!fbText.trim()) { showToast('Please enter feedback'); return }
+    const body = encodeURIComponent(fbText + (fbEmail ? '\n\nFrom: ' + fbEmail : ''))
+    const sub  = encodeURIComponent('Feedback: ' + title)
+    window.location.href = `mailto:feedback@cagovnews.com?subject=${sub}&body=${body}`
+    setFbOpen(false)
+    showToast('Opening email…')
+  }
+
+  const eTitle = encodeURIComponent(title)
+  const eUrl   = encodeURIComponent(url)
+  const mailto = `mailto:?subject=CAGovNews%3A%20${eTitle}&body=Read%20this%20article%3A%20${eUrl}`
+  const xUrl   = `https://twitter.com/intent/tweet?text=${eTitle}&url=${eUrl}`
+  const liUrl  = `https://www.linkedin.com/sharing/share-offsite/?url=${eUrl}`
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: '10px', maxWidth: '740px', width: '100%', padding: '32px', position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' }}>✕</button>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: '#fff', borderRadius: '10px', maxWidth: '760px', width: '100%', padding: '28px 32px', position: 'relative' }}>
+
+        {/* Close */}
+        <button onClick={onClose} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' }}>✕</button>
+
+        {/* Meta */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
           <AgencyBadge slug={release.agency_slug} />
           {release.tag && <TagBadge tag={release.tag} />}
         </div>
-        <div style={{ fontSize: '11px', color: '#9aa5b4', marginBottom: '12px' }}>{formatDate(release.published_date)}</div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1b3a6b', lineHeight: 1.3, marginBottom: '14px' }}>{release.title}</h1>
-        {release.summary && <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.7, marginBottom: '20px', borderLeft: `3px solid ${agencyColor}`, paddingLeft: '14px' }}>{release.summary}</p>}
-        <hr style={{ border: 'none', borderTop: '0.5px solid #e5e7eb', margin: '20px 0' }} />
-        {loading ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading full article...</div>
+        <div style={{ fontSize: '11px', color: '#9aa5b4', marginBottom: '10px' }}>{formatDate(release.published_date)}</div>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1b3a6b', lineHeight: 1.3, marginBottom: '14px' }}>{title}</h1>
+        {release.summary && (
+          <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.7, marginBottom: '16px', borderLeft: `3px solid ${agencyColor}`, paddingLeft: '14px' }}>{release.summary}</p>
+        )}
+
+        {/* ── Action bar ── */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '12px 0', borderTop: '0.5px solid #e5e7eb', borderBottom: '0.5px solid #e5e7eb', marginBottom: 20 }}>
+
+          <AbBtn onClick={handleSave} title="Save article" active={isSaved} activeStyle={{ bg: '#e8f0fb', color: '#1b3a6b' }}>
+            💾 {isSaved ? 'Saved' : 'Save'}
+          </AbBtn>
+
+          <AbBtn onClick={handleFav} title={isFav ? 'Remove from favorites' : 'Add to favorites'} active={isFav} activeStyle={{ bg: '#fffbeb', color: '#d97706' }}>
+            {isFav ? '★ Favorited' : '☆ Favorite'}
+          </AbBtn>
+
+          <span style={{ display: 'inline-block', width: 1, height: 20, background: '#e5e7eb', margin: '0 2px' }} />
+
+          <AbBtn href={mailto} title="Share via email">📧 Email</AbBtn>
+
+          <AbBtn href={xUrl} target="_blank" title="Post on X">𝕏 Post on X</AbBtn>
+
+          <AbBtn href={liUrl} target="_blank" title="Share on LinkedIn">in LinkedIn</AbBtn>
+
+          <AbBtn onClick={handleNativeShare} title="Share on other apps">↗ Share</AbBtn>
+
+          <span style={{ display: 'inline-block', width: 1, height: 20, background: '#e5e7eb', margin: '0 2px' }} />
+
+          {/* Download dropdown */}
+          <div ref={dlRef} style={{ position: 'relative' }}>
+            <AbBtn onClick={() => setDlOpen(v => !v)} title="Download" active={dlOpen}>
+              ⬇ Download ▾
+            </AbBtn>
+            {dlOpen && (
+              <div style={{ position: 'absolute', top: 34, left: 0, background: '#fff', border: '1px solid #dde3ec', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,.10)', minWidth: 180, zIndex: 200, overflow: 'hidden' }}>
+                <a href={url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, color: '#222', textDecoration: 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f5f7fb'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  🖨 Open &amp; Print as PDF
+                </a>
+                <a
+                  onClick={() => {
+                    const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title></head><body><h1>${title}</h1><p>${release.summary || ''}</p><p><a href="${url}">${url}</a></p></body></html>`], { type: 'text/html' })
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cagov-article.html'; a.click(); URL.revokeObjectURL(a.href)
+                    setDlOpen(false)
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, color: '#222', textDecoration: 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f5f7fb'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  📄 Download HTML
+                </a>
+              </div>
+            )}
+          </div>
+
+          <AbBtn onClick={() => setFbOpen(true)} title="Send feedback to CAGovNews">
+            💬 Feedback
+          </AbBtn>
+
+        </div>
+
+        {/* Article body */}
+        <hr style={{ border: 'none', borderTop: '0.5px solid #e5e7eb', margin: '0 0 20px' }} />
+        {loading
+          ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading full article...</div>
           : content?.extracted_text && content.scrape_status === 'ok'
           ? <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{content.extracted_text.slice(0, 4000)}{content.extracted_text.length > 4000 && '…'}</div>
           : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>Full article content will be available after the next crawler run.</div>
         }
+
+        {/* View original */}
         <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '0.5px solid #e5e7eb' }}>
-          <a href={release.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1b3a6b', color: '#fff', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontWeight: 500, textDecoration: 'none' }}>
-            View original on {release.source_url.replace(/https?:\/\//, '').split('/')[0]} ↗
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1b3a6b', color: '#fff', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontWeight: 500, textDecoration: 'none' }}>
+            View original on {url.replace(/https?:\/\//, '').split('/')[0]} ↗
           </a>
         </div>
       </div>
+
+      {/* Feedback modal */}
+      {fbOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setFbOpen(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, margin: 16, overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,.18)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e8e4' }}>
+              <strong style={{ fontSize: 15, fontFamily: 'inherit' }}>Feedback to CAGovNews</strong>
+              <button onClick={() => setFbOpen(false)} style={{ background: 'none', border: 'none', fontSize: 17, cursor: 'pointer', color: '#999' }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: 0 }}>Your feedback goes directly to the CAGovNews editorial team.</p>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Article</label>
+                <input value={title} readOnly style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, background: '#f8f8f6', color: '#888', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Feedback</label>
+                <textarea value={fbText} onChange={e => setFbText(e.target.value)} rows={4} placeholder="What would you like us to know?"
+                  style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Your email (optional)</label>
+                <input type="email" value={fbEmail} onChange={e => setFbEmail(e.target.value)} placeholder="you@example.com"
+                  style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid #e8e8e4', background: '#fafaf8' }}>
+              <button onClick={() => setFbOpen(false)} style={{ height: 34, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleFbSend} style={{ height: 34, padding: '0 18px', fontSize: 13, fontWeight: 600, border: 'none', background: '#1b3a6b', color: '#fff', borderRadius: 7, cursor: 'pointer' }}>Send feedback</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 22, right: 22, background: '#1a1a1a', color: '#fff', fontSize: 13, padding: '10px 18px', borderRadius: 9, zIndex: 3000, pointerEvents: 'none' }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Saved search storage ──────────────────────────────────────
-
-const STORAGE_KEY = 'cagovnews_saved_searches'
-function loadSaved() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
-function saveSaved(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) }
-
-// ── Main ──────────────────────────────────────────────────────
 
 const EMPTY_FILTERS = {
   search: '',
@@ -459,33 +667,38 @@ const EMPTY_FILTERS = {
   dateFrom: '',
   dateTo: '',
   sortBy: 'date_desc',
+  favoritesOnly: false,
 }
 
+// ── Main ──────────────────────────────────────────────────────
+
 export default function CAGovNewsHomepage() {
-  const [releases, setReleases] = useState([])
-  const [allAgencies, setAllAgencies] = useState([])
-  const [allTags, setAllTags] = useState([])
-  const [allCounties, setAllCounties] = useState([])
-  const [allCities, setAllCities] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [totalCount, setTotalCount] = useState(0)
+  const [releases, setReleases]           = useState([])
+  const [allAgencies, setAllAgencies]     = useState([])
+  const [allTags, setAllTags]             = useState([])
+  const [allCounties, setAllCounties]     = useState([])
+  const [allCities, setAllCities]         = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [totalCount, setTotalCount]       = useState(0)
   const [selectedRelease, setSelectedRelease] = useState(null)
 
-  // Unified filter state
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
-
-  // UI state
-  const [filterOpen, setFilterOpen] = useState(false)
+  const [filters, setFilters]             = useState(EMPTY_FILTERS)
+  const [filterOpen, setFilterOpen]       = useState(false)
   const [saveModalOpen, setSaveModalOpen] = useState(false)
-  const [saveName, setSaveName] = useState('')
+  const [saveName, setSaveName]           = useState('')
   const [savedSearches, setSavedSearches] = useState([])
-  const [savedMsg, setSavedMsg] = useState('')
+  const [savedMsg, setSavedMsg]           = useState('')
+
+  // Article save/fav state (persisted to localStorage)
+  const [savedArticles, setSavedArticles] = useState([])
+  const [favArticles, setFavArticles]     = useState([])
 
   const setF = (key, val) => setFilters(f => ({ ...f, [key]: val }))
 
-  // Load reference data
   useEffect(() => {
-    setSavedSearches(loadSaved())
+    setSavedSearches(lsGet(LS_SEARCHES))
+    setSavedArticles(lsGet(LS_SAVED))
+    setFavArticles(lsGet(LS_FAVS))
 
     supabase.from('agencies').select('slug, name').eq('active', true).order('slug')
       .then(({ data }) => setAllAgencies((data ?? []).map(a => ({ value: a.slug, label: a.slug }))))
@@ -505,10 +718,20 @@ export default function CAGovNewsHomepage() {
       })
   }, [])
 
-  // Fetch releases when filters change
   const fetchReleases = useCallback(async () => {
     setLoading(true)
-    const { search, agencies, tags, datePreset, dateFrom, dateTo, sortBy } = filters
+    const { search, agencies, tags, datePreset, dateFrom, dateTo, sortBy, favoritesOnly } = filters
+
+    // If favoritesOnly, filter from localStorage
+    if (favoritesOnly) {
+      const favIds = lsGet(LS_FAVS).map(a => a.id)
+      if (favIds.length === 0) { setReleases([]); setLoading(false); return }
+      let q = supabase.from('releases').select('*').in('id', favIds).limit(200)
+      const { data } = await q
+      setReleases(data ?? [])
+      setLoading(false)
+      return
+    }
 
     let q = supabase.from('releases').select('*').limit(200)
 
@@ -543,6 +766,18 @@ export default function CAGovNewsHomepage() {
 
   useEffect(() => { fetchReleases() }, [fetchReleases])
 
+  function toggleFavOnCard(release) {
+    const isFav = favArticles.some(a => a.id === release.id)
+    let updated
+    if (isFav) {
+      updated = favArticles.filter(a => a.id !== release.id)
+    } else {
+      updated = [{ id: release.id, title: release.title, url: release.source_url, agency: release.agency_slug, tag: release.tag, date: release.published_date, at: new Date().toISOString() }, ...favArticles]
+    }
+    setFavArticles(updated)
+    lsSet(LS_FAVS, updated)
+  }
+
   const resetFilters = () => setFilters(EMPTY_FILTERS)
 
   const activeCount = [
@@ -553,13 +788,14 @@ export default function CAGovNewsHomepage() {
     ...filters.cities,
     ...filters.tags,
     filters.datePreset || filters.dateFrom,
+    filters.favoritesOnly ? 'fav' : '',
   ].filter(Boolean).length
 
   const hasFilters = activeCount > 0 || filters.sortBy !== 'date_desc'
 
-  // Chips
   const chips = [
     filters.search && { label: `"${filters.search}"`, clear: () => setF('search', '') },
+    filters.favoritesOnly && { label: '★ Favorites', clear: () => setF('favoritesOnly', false) },
     ...filters.agencies.map(a => ({ label: a, clear: () => setF('agencies', filters.agencies.filter(x => x !== a)) })),
     ...filters.states.map(s => ({ label: s, clear: () => setF('states', filters.states.filter(x => x !== s)) })),
     ...filters.counties.map(c => ({ label: c, clear: () => setF('counties', filters.counties.filter(x => x !== c)) })),
@@ -571,12 +807,11 @@ export default function CAGovNewsHomepage() {
     },
   ].filter(Boolean)
 
-  // Saved searches
   const saveSearch = () => {
     if (!saveName.trim()) return
     const entry = { id: Date.now(), name: saveName.trim(), filters, created: new Date().toISOString() }
     const updated = [entry, ...savedSearches]
-    setSavedSearches(updated); saveSaved(updated)
+    setSavedSearches(updated); lsSet(LS_SEARCHES, updated)
     setSaveName(''); setSaveModalOpen(false)
     setSavedMsg(`"${entry.name}" saved`)
     setTimeout(() => setSavedMsg(''), 3000)
@@ -585,12 +820,8 @@ export default function CAGovNewsHomepage() {
   const loadSearch = (entry) => { setFilters(entry.filters); setFilterOpen(false) }
   const deleteSearch = (id) => {
     const updated = savedSearches.filter(s => s.id !== id)
-    setSavedSearches(updated); saveSaved(updated)
+    setSavedSearches(updated); lsSet(LS_SEARCHES, updated)
   }
-
-  const citiesFiltered = filters.counties.length > 0
-    ? allCities // ideally filter by county, simplified here
-    : allCities
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -610,15 +841,22 @@ export default function CAGovNewsHomepage() {
               <span key={l} style={{ color: '#cbd5e1', fontSize: '12px', cursor: 'pointer' }}>{l}</span>
             ))}
           </div>
-          <button style={{ background: '#f5a623', border: 'none', borderRadius: '4px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: '#1b3a6b', cursor: 'pointer' }}>Subscribe</button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {/* Favorites shortcut in header */}
+            <button
+              onClick={() => setF('favoritesOnly', !filters.favoritesOnly)}
+              title="Show favorites"
+              style={{ background: filters.favoritesOnly ? '#f5a623' : 'transparent', border: `1px solid ${filters.favoritesOnly ? '#f5a623' : '#4a6fa5'}`, borderRadius: 5, padding: '5px 10px', fontSize: 12, color: filters.favoritesOnly ? '#1b3a6b' : '#93c5fd', cursor: 'pointer', fontWeight: filters.favoritesOnly ? 700 : 400 }}>
+              ★ {favArticles.length > 0 ? `Favorites (${favArticles.length})` : 'Favorites'}
+            </button>
+            <button style={{ background: '#f5a623', border: 'none', borderRadius: '4px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: '#1b3a6b', cursor: 'pointer' }}>Subscribe</button>
+          </div>
         </div>
       </div>
 
       {/* Filter bar */}
       <div style={{ background: '#fff', borderBottom: '0.5px solid #d1d9e6', padding: '10px 20px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-
-          {/* Top row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search */}
             <div style={{ flex: '1', minWidth: '200px', position: 'relative' }}>
@@ -627,6 +865,19 @@ export default function CAGovNewsHomepage() {
                 placeholder="Search titles and summaries..."
                 style={{ width: '100%', fontSize: '13px', padding: '7px 12px 7px 30px', border: '1px solid #b0c0d8', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' }} />
             </div>
+
+            {/* Favorites filter pill */}
+            <button
+              onClick={() => setF('favoritesOnly', !filters.favoritesOnly)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: filters.favoritesOnly ? '#fffbeb' : '#fff',
+                color: filters.favoritesOnly ? '#d97706' : '#374151',
+                border: `1px solid ${filters.favoritesOnly ? '#fcd34d' : '#b0c0d8'}`,
+                borderRadius: '6px', padding: '7px 12px', fontSize: '12px', fontWeight: filters.favoritesOnly ? 600 : 400, cursor: 'pointer',
+              }}>
+              {filters.favoritesOnly ? '★' : '☆'} Favorites
+            </button>
 
             {/* Filter toggle */}
             <button onClick={() => setFilterOpen(v => !v)} style={{
@@ -645,12 +896,11 @@ export default function CAGovNewsHomepage() {
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
 
-            {/* Save */}
+            {/* Save search */}
             <button onClick={() => setSaveModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: '1px solid #b0c0d8', borderRadius: '6px', padding: '7px 12px', fontSize: '12px', color: '#374151', cursor: 'pointer' }}>
               🔖 Save
             </button>
 
-            {/* Saved dropdown */}
             {savedSearches.length > 0 && (
               <select onChange={e => { const s = savedSearches.find(x => String(x.id) === e.target.value); if (s) loadSearch(s); e.target.value = '' }} defaultValue=""
                 style={{ fontSize: '12px', padding: '7px 10px', border: '1px solid #b0c0d8', borderRadius: '6px', color: '#374151', background: '#fff', maxWidth: 160 }}>
@@ -659,7 +909,6 @@ export default function CAGovNewsHomepage() {
               </select>
             )}
 
-            {/* Reset */}
             {hasFilters && (
               <button onClick={resetFilters} style={{ fontSize: '12px', padding: '7px 12px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff5f5', color: '#dc2626', cursor: 'pointer', fontWeight: 500 }}>
                 ↺ Reset
@@ -671,29 +920,24 @@ export default function CAGovNewsHomepage() {
           {filterOpen && (
             <div style={{ marginTop: 12, padding: '16px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-
                 <MultiSelect label="Department" options={allAgencies} selected={filters.agencies} onChange={v => setF('agencies', v)} placeholder="All Departments" maxWidth={200} />
                 <MultiSelect label="State" options={STATES.map(s => ({ value: s.code, label: s.name }))} selected={filters.states} onChange={v => setF('states', v)} placeholder="All States" maxWidth={160} />
                 <MultiSelect label="County" options={allCounties} selected={filters.counties} onChange={v => { setF('counties', v); setF('cities', []) }} placeholder="All Counties" maxWidth={180} />
-                <MultiSelect label="City" options={citiesFiltered} selected={filters.cities} onChange={v => setF('cities', v)} placeholder="All Cities" maxWidth={180} />
+                <MultiSelect label="City" options={allCities} selected={filters.cities} onChange={v => setF('cities', v)} placeholder="All Cities" maxWidth={180} />
                 <MultiSelect label="Topic" options={allTags} selected={filters.tags} onChange={v => setF('tags', v)} placeholder="All Topics" maxWidth={180} />
-
                 <DateRangeSelect
                   datePreset={filters.datePreset}
                   dateFrom={filters.dateFrom}
                   dateTo={filters.dateTo}
                   onChange={({ preset, from, to }) => setFilters(f => ({ ...f, datePreset: preset, dateFrom: from, dateTo: to }))}
                 />
-
-                {/* Reset inside panel */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 0 }}>
-                  <button onClick={resetFilters} style={{ marginTop: 20, fontSize: '12px', padding: '7px 16px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff5f5', color: '#dc2626', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button onClick={resetFilters} style={{ marginTop: 20, fontSize: '12px', padding: '7px 16px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff5f5', color: '#dc2626', cursor: 'pointer', fontWeight: 500 }}>
                     ↺ Reset all
                   </button>
                 </div>
               </div>
 
-              {/* Active chips */}
               {chips.length > 0 && (
                 <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: 11, color: '#6b7280' }}>Active filters:</span>
@@ -703,10 +947,9 @@ export default function CAGovNewsHomepage() {
             </div>
           )}
 
-          {/* Results count */}
           <div style={{ marginTop: 8, fontSize: '12px', color: '#6b7280' }}>
             {loading ? 'Loading...' : (
-              <>Showing <strong style={{ color: '#1b3a6b' }}>{releases.length}</strong> of <strong style={{ color: '#1b3a6b' }}>{totalCount}</strong> releases</>
+              <>{filters.favoritesOnly ? '★ Showing favorites — ' : ''}Showing <strong style={{ color: '#1b3a6b' }}>{releases.length}</strong> of <strong style={{ color: '#1b3a6b' }}>{totalCount}</strong> releases</>
             )}
           </div>
         </div>
@@ -720,14 +963,22 @@ export default function CAGovNewsHomepage() {
           </div>
         ) : releases.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', color: '#9aa5b4' }}>
-            <div style={{ fontSize: '32px', marginBottom: 12 }}>🔍</div>
-            <div style={{ fontSize: '16px', marginBottom: '8px' }}>No releases found</div>
-            <div style={{ fontSize: '13px', marginBottom: 16 }}>Try adjusting your filters</div>
+            <div style={{ fontSize: '32px', marginBottom: 12 }}>{filters.favoritesOnly ? '★' : '🔍'}</div>
+            <div style={{ fontSize: '16px', marginBottom: '8px' }}>{filters.favoritesOnly ? 'No favorites yet' : 'No releases found'}</div>
+            <div style={{ fontSize: '13px', marginBottom: 16 }}>{filters.favoritesOnly ? 'Star articles to add them here.' : 'Try adjusting your filters'}</div>
             <button onClick={resetFilters} style={{ fontSize: '13px', padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Reset filters</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {releases.map(r => <NewsCard key={r.id} release={r} onClick={setSelectedRelease} />)}
+            {releases.map(r => (
+              <NewsCard
+                key={r.id}
+                release={r}
+                onClick={setSelectedRelease}
+                isFav={favArticles.some(a => a.id === r.id)}
+                onToggleFav={toggleFavOnCard}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -743,7 +994,16 @@ export default function CAGovNewsHomepage() {
       </div>
 
       {/* Article modal */}
-      {selectedRelease && <ArticleModal release={selectedRelease} onClose={() => setSelectedRelease(null)} />}
+      {selectedRelease && (
+        <ArticleModal
+          release={selectedRelease}
+          onClose={() => setSelectedRelease(null)}
+          savedArticles={savedArticles}
+          setSavedArticles={setSavedArticles}
+          favArticles={favArticles}
+          setFavArticles={setFavArticles}
+        />
+      )}
 
       {/* Save search modal */}
       {saveModalOpen && (
@@ -774,18 +1034,6 @@ export default function CAGovNewsHomepage() {
       {savedMsg && (
         <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 3000, background: '#1b3a6b', color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           🔖 {savedMsg}
-        </div>
-      )}
-
-      {/* Manage saved searches */}
-      {savedSearches.length > 0 && saveModalOpen === false && (
-        <div style={{ display: 'none' }}>
-          {savedSearches.map(s => (
-            <div key={s.id}>
-              {s.name}
-              <button onClick={() => deleteSearch(s.id)}>×</button>
-            </div>
-          ))}
         </div>
       )}
     </div>
