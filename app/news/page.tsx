@@ -272,7 +272,7 @@ export default function CAGovNewsHomepage() {
             <div style={{ width: '32px', height: '32px', background: '#fff', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#1b3a6b' }}>CA</div>
             <div>
               <div style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>CA Gov News</div>
-              <div style={{ color: '#93c5fd', fontSize: '9px' }}>Official California Government News</div>
+              <div style={{ color: '#93c5fd', fontSize: '9px' }}>News from Government Sources</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
