@@ -862,7 +862,15 @@ export default function CAGovNewsHomepage() {
 
   const [filters, setFilters]             = useState(EMPTY_FILTERS)
   const [filterOpen, setFilterOpen]       = useState(false)
-  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [saveModalOpen, setSaveModalOpen]   = useState(false)
+  const [subOpen, setSubOpen]               = useState(false)
+  const [subEmail, setSubEmail]             = useState('')
+  const [subName, setSubName]               = useState('')
+  const [subFreq, setSubFreq]               = useState('daily')
+  const [subTopics, setSubTopics]           = useState([])
+  const [subAgencies, setSubAgencies]       = useState([])
+  const [subDone, setSubDone]               = useState(false)
+  const [subEmailError, setSubEmailError]   = useState('')
   const [saveName, setSaveName]           = useState('')
   const [savedSearches, setSavedSearches] = useState([])
   const [savedMsg, setSavedMsg]           = useState('')
@@ -1027,7 +1035,7 @@ export default function CAGovNewsHomepage() {
               style={{ background: filters.favoritesOnly ? '#f5a623' : 'transparent', border: `1px solid ${filters.favoritesOnly ? '#f5a623' : '#4a6fa5'}`, borderRadius: 5, padding: '5px 10px', fontSize: 12, color: filters.favoritesOnly ? '#1b3a6b' : '#93c5fd', cursor: 'pointer', fontWeight: filters.favoritesOnly ? 700 : 400 }}>
               ★ {favArticles.length > 0 ? `Favorites (${favArticles.length})` : 'Favorites'}
             </button>
-            <button style={{ background: '#f5a623', border: 'none', borderRadius: '4px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: '#1b3a6b', cursor: 'pointer' }}>Subscribe</button>
+            <button onClick={() => { setSubOpen(true); setSubDone(false) }} style={{ background: '#f5a623', border: 'none', borderRadius: '4px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: '#1b3a6b', cursor: 'pointer' }}>Subscribe</button>
           </div>
         </div>
       </div>
@@ -1181,6 +1189,151 @@ export default function CAGovNewsHomepage() {
           favArticles={favArticles}
           setFavArticles={setFavArticles}
         />
+      )}
+
+      {/* ── Subscribe modal ── */}
+      {subOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setSubOpen(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 500, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,.22)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ background: '#1b3a6b', padding: '20px 24px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ color: '#fff', fontSize: 17, fontWeight: 700 }}>📬 Subscribe to CAGovNews</div>
+                  <div style={{ color: '#93c5fd', fontSize: 12, marginTop: 3 }}>Get California government news delivered to your inbox</div>
+                </div>
+                <button onClick={() => setSubOpen(false)} style={{ background: 'none', border: 'none', color: '#93c5fd', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}>✕</button>
+              </div>
+            </div>
+
+            {subDone ? (
+              /* Success state */
+              <div style={{ padding: '40px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 48 }}>✅</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1b3a6b' }}>You&apos;re subscribed!</div>
+                <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, maxWidth: 340 }}>
+                  A confirmation email is on its way to <strong>{subEmail}</strong>. You&apos;ll start receiving your {subFreq} digest soon.
+                </div>
+                <button onClick={() => setSubOpen(false)} style={{ marginTop: 8, padding: '10px 24px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Scrollable body */}
+                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', flex: 1 }}>
+
+                  {/* Name + Email */}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>First name</label>
+                      <input
+                        type="text" value={subName} onChange={e => setSubName(e.target.value)}
+                        placeholder="Jane"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                        Email <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <input
+                        type="email" value={subEmail} onChange={e => { setSubEmail(e.target.value); if (subEmailError) setSubEmailError('') }}
+                        placeholder="you@example.com"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subEmailError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subEmailError ? '#fff5f5' : '#fff' }}
+                      />
+                      {subEmailError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subEmailError}</div>}
+                    </div>
+                  </div>
+
+                  {/* Frequency */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Delivery frequency</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { val: 'realtime', label: '⚡ Real-time',  desc: 'As published' },
+                        { val: 'daily',    label: '☀️ Daily',      desc: 'Morning digest' },
+                        { val: 'weekly',   label: '📅 Weekly',     desc: 'Monday recap' },
+                      ].map(f => (
+                        <div key={f.val} onClick={() => setSubFreq(f.val)}
+                          style={{ flex: 1, padding: '10px 8px', border: `2px solid ${subFreq === f.val ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 8, cursor: 'pointer', textAlign: 'center', background: subFreq === f.val ? '#eef2ff' : '#fafafa', transition: 'all .12s' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: subFreq === f.val ? '#1b3a6b' : '#374151' }}>{f.label}</div>
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{f.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Topics */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                      Topics <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(optional — leave blank for all)</span>
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {['Public Safety', 'Health', 'Environment', 'Housing', 'Technology', 'Budget', 'Education', 'Wildfire', 'Insurance', 'Climate', 'Energy', 'Veterans', 'Civil Rights', 'Elections'].map(t => {
+                        const on = subTopics.includes(t)
+                        return (
+                          <button key={t} onClick={() => setSubTopics(prev => on ? prev.filter(x => x !== t) : [...prev, t])}
+                            style={{ padding: '5px 10px', fontSize: 12, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .12s' }}>
+                            {t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Agencies */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                      Departments <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(optional)</span>
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {['Governor', 'CDPH', 'DOJ / AG', 'Caltrans', 'CDT', 'CARB', 'CalVet', 'CDCR', 'DCC', 'EDD', 'CDE', 'DHCS', 'Cal OES', 'DMV', 'CalPERS'].map(a => {
+                        const on = subAgencies.includes(a)
+                        return (
+                          <button key={a} onClick={() => setSubAgencies(prev => on ? prev.filter(x => x !== a) : [...prev, a])}
+                            style={{ padding: '5px 10px', fontSize: 12, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .12s' }}>
+                            {a}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.5 }}>
+                    By subscribing you agree to receive email from CAGovNews. Unsubscribe at any time. We never share your email.
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid #e8e8e4', background: '#fafaf8', flexShrink: 0 }}>
+                  <div style={{ fontSize: 12, color: '#9ca3af' }}>
+                    {subTopics.length > 0 && `${subTopics.length} topic${subTopics.length > 1 ? 's' : ''}`}
+                    {subTopics.length > 0 && subAgencies.length > 0 && ' · '}
+                    {subAgencies.length > 0 && `${subAgencies.length} dept${subAgencies.length > 1 ? 's' : ''}`}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setSubOpen(false)} style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
+                    <button
+                      onClick={() => {
+                        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                        if (!subEmail.trim()) { setSubEmailError('Email is required'); return }
+                        if (!emailRe.test(subEmail.trim())) { setSubEmailError('Please enter a valid email'); return }
+                        setSubEmailError('')
+                        setSubDone(true)
+                      }}
+                      disabled={!subEmail.trim()}
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, cursor: subEmail.trim() ? 'pointer' : 'not-allowed', background: subEmail.trim() ? '#f5a623' : '#e5e7eb', color: subEmail.trim() ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
+                      Subscribe →
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Save search modal */}
