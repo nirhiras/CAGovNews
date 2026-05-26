@@ -35,6 +35,8 @@ function parseDate(str) {
     if (isNaN(d)) return null;
     const y = d.getFullYear();
     if (y < 2020 || y > 2030) return null;
+    // Reject future dates — article body often contains upcoming event dates
+    if (d > new Date()) return null;
     return d.toISOString().split('T')[0];
   } catch { return null; }
 }
