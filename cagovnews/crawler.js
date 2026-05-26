@@ -16,52 +16,7 @@ const supabase = createClient(
 const DRY_RUN = process.env.DRY_RUN === 'true';
 const AGENCY_FILTER = process.env.AGENCY_FILTER || null;
 
-const AGENCIES = [
-  { slug: 'Governor',      news_url: 'https://www.gov.ca.gov/newsroom/' },
-  { slug: 'CDPH',          news_url: 'https://www.cdph.ca.gov/Programs/OPA/Pages/News-Releases-2026.aspx' },
-  { slug: 'DOJ',           news_url: 'https://oag.ca.gov/news' },
-  { slug: 'DOF',           news_url: 'https://dof.ca.gov/budget/resources-for-departments/budget-letters/' },
-  { slug: 'Caltrans',      news_url: 'https://dot.ca.gov/news-releases' },
-  { slug: 'CARB',          news_url: 'https://ww2.arb.ca.gov/news' },
-  { slug: 'CEC',           news_url: 'https://www.energy.ca.gov/newsroom/news-releases' },
-  { slug: 'CPUC',          news_url: 'https://www.cpuc.ca.gov/news-and-updates/all-news' },
-  { slug: 'DMV',           news_url: 'https://www.dmv.ca.gov/portal/news-and-media/news-releases/' },
-  { slug: 'DMHC',          news_url: 'https://www.dmhc.ca.gov/Resources/Newsroom/PressReleases.aspx' },
-  { slug: 'Insurance',     news_url: 'https://www.insurance.ca.gov/0400-news/0100-press-releases/2026/' },
-  { slug: 'DFPI',          news_url: 'https://dfpi.ca.gov/news/' },
-  { slug: 'DTSC',          news_url: 'https://dtsc.ca.gov/news/' },
-  { slug: 'CalPrivacy',    news_url: 'https://cppa.ca.gov/announcements/' },
-  { slug: 'FPPC',          news_url: 'https://www.fppc.ca.gov/news-releases.html' },
-  { slug: 'EDD',           news_url: 'https://www.edd.ca.gov/about_edd/newsreleases.htm' },
-  { slug: 'Controller',    news_url: 'https://www.sco.ca.gov/eo_pressrel.html' },
-  { slug: 'Treasurer',     news_url: 'https://www.treasurer.ca.gov/news/releases.asp' },
-  { slug: 'Sec. of State', news_url: 'https://www.sos.ca.gov/administration/news-releases-and-advisories/2026-news-releases-and-advisories' },
-  { slug: 'CDE',           news_url: 'https://www.cde.ca.gov/nr/ne/yr26/' },
-  { slug: 'DHCS',          news_url: 'https://www.dhcs.ca.gov/Documents/DHCS-Press-Releases.aspx' },
-  { slug: 'HCD',           news_url: 'https://www.hcd.ca.gov/about/newsroom/press-releases' },
-  { slug: 'CalHFA',        news_url: 'https://www.calhfa.ca.gov/about/newsroom/' },
-  { slug: 'CalRecycle',    news_url: 'https://www2.calrecycle.ca.gov/NewsRoom' },
-  { slug: 'Water Board',   news_url: 'https://www.waterboards.ca.gov/press_room/press_releases/2026/' },
-  { slug: 'OTS',           news_url: 'https://www.ots.ca.gov/media-and-research/news-releases/' },
-  { slug: 'CDT',           news_url: 'https://cdt.ca.gov/news/' },
-  { slug: 'DGS',           news_url: 'https://www.dgs.ca.gov/PD/News' },
-  { slug: 'CalPERS',       news_url: 'https://www.calpers.ca.gov/page/newsroom/calpers-news' },
-  { slug: 'FTB',           news_url: 'https://www.ftb.ca.gov/about-ftb/newsroom/news-releases/' },
-  { slug: 'Parks',         news_url: 'https://www.parks.ca.gov/Newsroom' },
-  { slug: 'CDFA',          news_url: 'https://pressreleases.cdfa.ca.gov/' },
-  { slug: 'DPR',           news_url: 'https://www.cdpr.ca.gov/docs/pressrls/2026prs.htm' },
-  { slug: 'CSAC',          news_url: 'https://www.csac.ca.gov/news-releases' },
-  { slug: 'Cal OES',       news_url: 'https://www.caloes.ca.gov/news-release/' },
-  { slug: 'OTSI',          news_url: 'https://otsi.ca.gov/' },
-  { slug: 'ABC',           news_url: 'https://www.abc.ca.gov/news-releases/' },
-  { slug: 'CDA',           news_url: 'https://aging.ca.gov/newsroom/' },
-  { slug: 'CRD',           news_url: 'https://calcivilrights.ca.gov/news/' },
-  { slug: 'CalHR',         news_url: 'https://www.calhr.ca.gov/newsroom/' },
-  { slug: 'DCC',           news_url: 'https://www.cannabis.ca.gov/press-releases/' },
-  { slug: 'OEHHA',         news_url: 'https://oehha.ca.gov/public-information/press-releases' },
-  { slug: 'Energy Safety', news_url: 'https://energysafety.ca.gov/news/' },
-  { slug: 'CDCR',          news_url: 'https://www.cdcr.ca.gov/news/' },
-];
+// AGENCIES loaded dynamically from news_sources table in Supabase
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const sha256 = (text) => crypto.createHash('sha256').update(text ?? '').digest('hex');
@@ -352,8 +307,15 @@ async function runCrawler() {
   console.log('\n🕷️  CAGovNews crawler started:', new Date().toISOString());
   if (DRY_RUN) console.log('   DRY RUN\n');
 
-  const agenciesToRun = AGENCY_FILTER ? AGENCIES.filter(a => a.slug === AGENCY_FILTER) : AGENCIES;
-  if (!agenciesToRun.length) { console.error(`No agency: ${AGENCY_FILTER}`); process.exit(1); }
+  // Load agencies from DB instead of hardcoded array
+  let query = supabase.from('news_sources').select('slug, name, news_url').eq('active', true).order('slug');
+  if (AGENCY_FILTER) query = query.eq('slug', AGENCY_FILTER);
+  const { data: agenciesToRun, error: agenciesError } = await query;
+  if (agenciesError || !agenciesToRun?.length) {
+    console.error('Failed to load agencies from DB:', agenciesError?.message ?? 'No active sources found');
+    process.exit(1);
+  }
+  console.log(`  Loaded ${agenciesToRun.length} sources from news_sources table\n`);
 
   let crawlId = null;
   if (!DRY_RUN) {
