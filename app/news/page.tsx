@@ -441,10 +441,13 @@ function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favAr
   const [content, setContent]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [toast, setToast]       = useState('')
-  const [fbOpen, setFbOpen]     = useState(false)
-  const [fbText, setFbText]     = useState('')
-  const [fbEmail, setFbEmail]   = useState('')
-  const [dlOpen, setDlOpen]     = useState(false)
+  const [fbOpen, setFbOpen]         = useState(false)
+  const [fbText, setFbText]         = useState('')
+  const [fbEmail, setFbEmail]       = useState('')
+  const [fbEmailError, setFbEmailError] = useState('')
+  const [fbCategories, setFbCategories] = useState([])
+  const [fbAttachments, setFbAttachments] = useState([])
+  const [dlOpen, setDlOpen]         = useState(false)
   const dlRef                   = useRef(null)
 
   const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1b3a6b'
@@ -499,13 +502,41 @@ function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favAr
     }
   }
 
+  function toggleCategory(cat) {
+    setFbCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])
+  }
+
+  function handleAttachments(e) {
+    const files = Array.from(e.target.files || [])
+    setFbAttachments(prev => [...prev, ...files].slice(0, 5))
+  }
+
+  function removeAttachment(idx) {
+    setFbAttachments(prev => prev.filter((_, i) => i !== idx))
+  }
+
   function handleFbSend() {
-    if (!fbText.trim()) { showToast('Please enter feedback'); return }
-    const body = encodeURIComponent(fbText + (fbEmail ? '\n\nFrom: ' + fbEmail : ''))
-    const sub  = encodeURIComponent('Feedback: ' + title)
-    window.location.href = `mailto:feedback@cagovnews.com?subject=${sub}&body=${body}`
+    // Validate email (mandatory)
+    if (!fbEmail.trim()) { setFbEmailError('Email is required'); return }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(fbEmail.trim())) { setFbEmailError('Please enter a valid email address'); return }
+    setFbEmailError('')
+
+    if (fbCategories.length === 0 && !fbText.trim()) {
+      showToast('Please select a category or enter feedback'); return
+    }
+
+    const catLine  = fbCategories.length > 0 ? 'Categories: ' + fbCategories.join(', ') + '\n\n' : ''
+    const bodyText = catLine + (fbText.trim() || '')
+    const attLine  = fbAttachments.length > 0 ? '\n\n[Attachments: ' + fbAttachments.map(f => f.name).join(', ') + ']' : ''
+    const full     = bodyText + attLine + '\n\nFrom: ' + fbEmail.trim()
+    const sub      = encodeURIComponent('CAGovNews Feedback: ' + title)
+    window.location.href = 'mailto:feedback@cagovnews.com?subject=' + sub + '&body=' + encodeURIComponent(full)
     setFbOpen(false)
-    showToast('Opening email…')
+    setFbCategories([])
+    setFbText('')
+    setFbAttachments([])
+    showToast('Opening email client…')
   }
 
   const eTitle = encodeURIComponent(title)
@@ -612,33 +643,180 @@ function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favAr
 
       {/* Feedback modal */}
       {fbOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
           onClick={e => e.target === e.currentTarget && setFbOpen(false)}>
-          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, margin: 16, overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,.18)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e8e4' }}>
-              <strong style={{ fontSize: 15, fontFamily: 'inherit' }}>Feedback to CAGovNews</strong>
-              <button onClick={() => setFbOpen(false)} style={{ background: 'none', border: 'none', fontSize: 17, cursor: 'pointer', color: '#999' }}>✕</button>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,.22)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e8e4', flexShrink: 0 }}>
+              <div>
+                <strong style={{ fontSize: 15, fontFamily: 'inherit', color: '#111' }}>Feedback to CAGovNews</strong>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Your feedback goes directly to our editorial team.</div>
+              </div>
+              <button onClick={() => setFbOpen(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#999', lineHeight: 1, padding: '2px 4px' }}>✕</button>
             </div>
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: 0 }}>Your feedback goes directly to the CAGovNews editorial team.</p>
+
+            {/* Scrollable body */}
+            <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1 }}>
+
+              {/* Article (read-only) */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Article</label>
-                <input value={title} readOnly style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, background: '#f8f8f6', color: '#888', boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>Article</label>
+                <div style={{ fontSize: 13, padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 7, background: '#f9fafb', color: '#6b7280', lineHeight: 1.4 }}>{title}</div>
               </div>
+
+              {/* Categories */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Feedback</label>
-                <textarea value={fbText} onChange={e => setFbText(e.target.value)} rows={4} placeholder="What would you like us to know?"
-                  style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                  Feedback type <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(select all that apply)</span>
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { id: 'incomplete', label: 'Article is incomplete', icon: '📋', desc: 'Missing key details, context, or follow-up information' },
+                    { id: 'incorrect',  label: 'Article is incorrect',  icon: '⚠️', desc: 'Contains factual errors, wrong dates, or misinformation' },
+                    { id: 'outdated',   label: 'Article is outdated',   icon: '🕐', desc: 'Information has changed or been superseded' },
+                    { id: 'other',      label: 'Other comments',        icon: '💬', desc: 'General feedback, suggestions, or other issues' },
+                  ].map(cat => {
+                    const checked = fbCategories.includes(cat.id)
+                    return (
+                      <div
+                        key={cat.id}
+                        onClick={() => toggleCategory(cat.id)}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+                          border: `1px solid ${checked ? '#1b3a6b' : '#e5e7eb'}`,
+                          borderRadius: 8, cursor: 'pointer',
+                          background: checked ? '#eef2ff' : '#fafafa',
+                          transition: 'all .12s',
+                        }}
+                      >
+                        <div style={{
+                          width: 17, height: 17, borderRadius: 4, flexShrink: 0, marginTop: 1,
+                          border: `2px solid ${checked ? '#1b3a6b' : '#d1d5db'}`,
+                          background: checked ? '#1b3a6b' : '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {checked && <span style={{ color: '#fff', fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: checked ? 600 : 500, color: checked ? '#1b3a6b' : '#374151' }}>
+                            {cat.icon} {cat.label}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{cat.desc}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
+
+              {/* Comments — shown always, required if a category with comments is checked */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 }}>Your email (optional)</label>
-                <input type="email" value={fbEmail} onChange={e => setFbEmail(e.target.value)} placeholder="you@example.com"
-                  style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                  Additional comments
+                  {(fbCategories.includes('incomplete') || fbCategories.includes('incorrect')) && (
+                    <span style={{ color: '#dc2626', marginLeft: 4 }}>*</span>
+                  )}
+                </label>
+                <textarea
+                  value={fbText}
+                  onChange={e => setFbText(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    fbCategories.includes('incomplete') ? 'What information is missing from this article?' :
+                    fbCategories.includes('incorrect')  ? 'What is incorrect and what should it say?' :
+                    'Add any additional details here…'
+                  }
+                  style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.5 }}
+                />
               </div>
+
+              {/* Attachments */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                  Attachments <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(up to 5 files)</span>
+                </label>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                  border: '1px dashed #d1d5db', borderRadius: 7, cursor: 'pointer',
+                  background: '#fafafa', fontSize: 13, color: '#6b7280',
+                  transition: 'border-color .12s',
+                }}>
+                  <span style={{ fontSize: 16 }}>📎</span>
+                  <span>Click to attach files (images, PDFs, docs)</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    onChange={handleAttachments}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {fbAttachments.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {fbAttachments.map((f, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: '#f0f4ff', borderRadius: 6, fontSize: 12, color: '#374151' }}>
+                        <span style={{ fontSize: 14 }}>
+                          {f.type.startsWith('image/') ? '🖼️' : f.name.endsWith('.pdf') ? '📄' : '📝'}
+                        </span>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                        <span style={{ fontSize: 11, color: '#9ca3af' }}>{(f.size / 1024).toFixed(0)} KB</span>
+                        <button onClick={() => removeAttachment(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 14, lineHeight: 1, padding: 0 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Email — mandatory */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                  Your email <span style={{ color: '#dc2626' }}>*</span>
+                  <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(required — so we can follow up)</span>
+                </label>
+                <input
+                  type="email"
+                  value={fbEmail}
+                  onChange={e => { setFbEmail(e.target.value); if (fbEmailError) setFbEmailError('') }}
+                  placeholder="you@example.com"
+                  style={{
+                    width: '100%', fontSize: 13, padding: '9px 11px',
+                    border: `1px solid ${fbEmailError ? '#dc2626' : '#dde3ec'}`,
+                    borderRadius: 7, outline: 'none', boxSizing: 'border-box',
+                    background: fbEmailError ? '#fff5f5' : '#fff',
+                  }}
+                />
+                {fbEmailError && (
+                  <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>⚠ {fbEmailError}</div>
+                )}
+              </div>
+
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid #e8e8e4', background: '#fafaf8' }}>
-              <button onClick={() => setFbOpen(false)} style={{ height: 34, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleFbSend} style={{ height: 34, padding: '0 18px', fontSize: 13, fontWeight: 600, border: 'none', background: '#1b3a6b', color: '#fff', borderRadius: 7, cursor: 'pointer' }}>Send feedback</button>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '14px 20px', borderTop: '1px solid #e8e8e4', background: '#fafaf8', flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                {fbCategories.length > 0 && `${fbCategories.length} type${fbCategories.length > 1 ? 's' : ''} selected`}
+                {fbAttachments.length > 0 && ` · ${fbAttachments.length} file${fbAttachments.length > 1 ? 's' : ''} attached`}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setFbOpen(false); setFbCategories([]); setFbText(''); setFbAttachments([]); setFbEmailError('') }}
+                  style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFbSend}
+                  disabled={!fbEmail.trim() || (fbCategories.length === 0 && !fbText.trim())}
+                  style={{
+                    height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600,
+                    border: 'none', borderRadius: 7, cursor: (!fbEmail.trim() || (fbCategories.length === 0 && !fbText.trim())) ? 'not-allowed' : 'pointer',
+                    background: (!fbEmail.trim() || (fbCategories.length === 0 && !fbText.trim())) ? '#e5e7eb' : '#1b3a6b',
+                    color: (!fbEmail.trim() || (fbCategories.length === 0 && !fbText.trim())) ? '#9ca3af' : '#fff',
+                    transition: 'background .12s',
+                  }}>
+                  Send feedback
+                </button>
+              </div>
             </div>
           </div>
         </div>
