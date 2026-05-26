@@ -59,22 +59,22 @@ const TAG_STYLES = {
 }
 
 const DATE_PRESETS = [
-  { label: 'Today',        value: 'today' },
-  { label: 'Yesterday',    value: 'yesterday' },
-  { label: 'Last 7 days',  value: 'last7' },
-  { label: 'Last 15 days', value: 'last15' },
-  { label: 'Last 30 days', value: 'last30' },
-  { label: 'Last 60 days', value: 'last60' },
-  { label: 'Last 180 days',value: 'last180' },
-  { label: 'This week',    value: 'thisWeek' },
-  { label: 'Last week',    value: 'lastWeek' },
-  { label: 'This month',   value: 'thisMonth' },
-  { label: 'Last month',   value: 'lastMonth' },
-  { label: 'This quarter', value: 'thisQuarter' },
-  { label: 'Last quarter', value: 'lastQuarter' },
-  { label: 'This year',    value: 'thisYear' },
-  { label: 'Last year',    value: 'lastYear' },
-  { label: 'Custom range', value: 'custom' },
+  { label: 'Today',         value: 'today' },
+  { label: 'Yesterday',     value: 'yesterday' },
+  { label: 'Last 7 days',   value: 'last7' },
+  { label: 'Last 15 days',  value: 'last15' },
+  { label: 'Last 30 days',  value: 'last30' },
+  { label: 'Last 60 days',  value: 'last60' },
+  { label: 'Last 180 days', value: 'last180' },
+  { label: 'This week',     value: 'thisWeek' },
+  { label: 'Last week',     value: 'lastWeek' },
+  { label: 'This month',    value: 'thisMonth' },
+  { label: 'Last month',    value: 'lastMonth' },
+  { label: 'This quarter',  value: 'thisQuarter' },
+  { label: 'Last quarter',  value: 'lastQuarter' },
+  { label: 'This year',     value: 'thisYear' },
+  { label: 'Last year',     value: 'lastYear' },
+  { label: 'Custom range',  value: 'custom' },
 ]
 
 const SORT_OPTIONS = [
@@ -85,22 +85,26 @@ const SORT_OPTIONS = [
   { label: 'Department A→Z', value: 'agency_asc' },
 ]
 
+const STATES = [
+  { code: 'CA', name: 'California' },
+  { code: 'NY', name: 'New York' },
+  { code: 'TX', name: 'Texas' },
+  { code: 'FL', name: 'Florida' },
+]
+
 // ── Date helpers ──────────────────────────────────────────────
 
 function getDateRange(preset) {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
-
   const fmt = (d) => d.toISOString().split('T')[0]
   const sub = (d, n) => { const x = new Date(d); x.setDate(x.getDate() - n); return x }
-
-  const dow = now.getDay() // 0=Sun
+  const dow = now.getDay()
   const startOfWeek = sub(now, dow === 0 ? 6 : dow - 1)
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const startOfYear = new Date(now.getFullYear(), 0, 1)
   const q = Math.floor(now.getMonth() / 3)
   const startOfQuarter = new Date(now.getFullYear(), q * 3, 1)
-
   switch (preset) {
     case 'today':        return { from: today, to: today }
     case 'yesterday':    return { from: fmt(sub(now, 1)), to: fmt(sub(now, 1)) }
@@ -117,54 +121,260 @@ function getDateRange(preset) {
     case 'thisMonth':    return { from: fmt(startOfMonth), to: today }
     case 'lastMonth': {
       const end = new Date(now.getFullYear(), now.getMonth(), 0)
-      const start = new Date(end.getFullYear(), end.getMonth(), 1)
-      return { from: fmt(start), to: fmt(end) }
+      return { from: fmt(new Date(end.getFullYear(), end.getMonth(), 1)), to: fmt(end) }
     }
     case 'thisQuarter':  return { from: fmt(startOfQuarter), to: today }
     case 'lastQuarter': {
       const end = new Date(startOfQuarter.getTime() - 1)
-      const start = new Date(end.getFullYear(), Math.floor(end.getMonth() / 3) * 3, 1)
-      return { from: fmt(start), to: fmt(end) }
+      return { from: fmt(new Date(end.getFullYear(), Math.floor(end.getMonth() / 3) * 3, 1)), to: fmt(end) }
     }
     case 'thisYear':     return { from: fmt(startOfYear), to: today }
-    case 'lastYear': {
-      return { from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` }
-    }
-    default: return { from: '', to: '' }
+    case 'lastYear':     return { from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` }
+    default:             return { from: '', to: '' }
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────
+function getTagStyle(tag) { return TAG_STYLES[tag] || { bg: '#f1f5f9', color: '#334155' } }
+function formatDate(d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
 
-function getTagStyle(tag) {
-  return TAG_STYLES[tag] || { bg: '#f1f5f9', color: '#334155' }
+// ── Multi-select dropdown ─────────────────────────────────────
+
+function MultiSelect({ label, options, selected, onChange, placeholder = 'All', maxWidth = 200 }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = options.filter(o =>
+    !search || (typeof o === 'string' ? o : o.label || o.name || o.slug || o)
+      .toLowerCase().includes(search.toLowerCase())
+  )
+
+  const getVal = (o) => typeof o === 'string' ? o : o.value ?? o.code ?? o.slug ?? o
+  const getLbl = (o) => typeof o === 'string' ? o : o.label ?? o.name ?? o.slug ?? o
+
+  const toggle = (val) => {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val])
+  }
+
+  const displayText = selected.length === 0
+    ? placeholder
+    : selected.length === 1
+    ? getLbl(options.find(o => getVal(o) === selected[0]) ?? selected[0])
+    : `${selected.length} selected`
+
+  return (
+    <div ref={ref} style={{ position: 'relative', minWidth: 140, maxWidth }}>
+      <label style={{ fontSize: 10, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontSize: 12, padding: '7px 10px', border: `1px solid ${open || selected.length > 0 ? '#1b3a6b' : '#b0c0d8'}`,
+          borderRadius: 6, background: selected.length > 0 ? '#eef2ff' : '#fff',
+          color: '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          boxSizing: 'border-box',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: selected.length > 0 ? '#1b3a6b' : '#6b7280', fontWeight: selected.length > 0 ? 600 : 400 }}>
+          {displayText}
+        </span>
+        <span style={{ marginLeft: 6, fontSize: 10, color: '#9aa5b4', flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 500,
+          background: '#fff', border: '1px solid #d1d9e6', borderRadius: 8,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4,
+          minWidth: 200, maxHeight: 280, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+        }}>
+          {/* Search inside dropdown */}
+          {options.length > 8 && (
+            <div style={{ padding: '8px 10px', borderBottom: '1px solid #f0f0f0' }}>
+              <input
+                autoFocus
+                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder={`Search ${label.toLowerCase()}...`}
+                style={{ width: '100%', fontSize: 12, padding: '5px 8px', border: '1px solid #d1d9e6', borderRadius: 5, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          )}
+          {/* Select all / clear */}
+          <div style={{ display: 'flex', gap: 8, padding: '6px 10px', borderBottom: '1px solid #f0f0f0' }}>
+            <button onClick={() => onChange(filtered.map(getVal))} style={{ fontSize: 11, color: '#1b3a6b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Select all</button>
+            <span style={{ color: '#d1d9e6' }}>|</span>
+            <button onClick={() => onChange([])} style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear</button>
+            {selected.length > 0 && <span style={{ fontSize: 11, color: '#9aa5b4', marginLeft: 'auto' }}>{selected.length} selected</span>}
+          </div>
+          {/* Options list */}
+          <div style={{ overflowY: 'auto', maxHeight: 200 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '12px 10px', fontSize: 12, color: '#9aa5b4', textAlign: 'center' }}>No results</div>
+            ) : filtered.map((o) => {
+              const val = getVal(o)
+              const lbl = getLbl(o)
+              const checked = selected.includes(val)
+              return (
+                <div
+                  key={val}
+                  onClick={() => toggle(val)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 10px', cursor: 'pointer', fontSize: 12,
+                    background: checked ? '#f0f4ff' : 'transparent',
+                    color: checked ? '#1b3a6b' : '#374151',
+                  }}
+                  onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#f8fafc' }}
+                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <div style={{
+                    width: 15, height: 15, borderRadius: 3, flexShrink: 0,
+                    border: `2px solid ${checked ? '#1b3a6b' : '#b0c0d8'}`,
+                    background: checked ? '#1b3a6b' : '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 9, lineHeight: 1 }}>✓</span>}
+                  </div>
+                  <span style={{ fontWeight: checked ? 500 : 400 }}>{lbl}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+// ── Date range dropdown ───────────────────────────────────────
+
+function DateRangeSelect({ datePreset, dateFrom, dateTo, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const hasValue = datePreset || dateFrom
+  const label = datePreset
+    ? DATE_PRESETS.find(p => p.value === datePreset)?.label
+    : (dateFrom || dateTo)
+    ? `${dateFrom}${dateTo ? ' → ' + dateTo : ''}`
+    : 'All time'
+
+  return (
+    <div ref={ref} style={{ position: 'relative', minWidth: 160 }}>
+      <label style={{ fontSize: 10, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>DATE RANGE</label>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontSize: 12, padding: '7px 10px', border: `1px solid ${open || hasValue ? '#1b3a6b' : '#b0c0d8'}`,
+          borderRadius: 6, background: hasValue ? '#eef2ff' : '#fff',
+          color: hasValue ? '#1b3a6b' : '#6b7280', cursor: 'pointer', fontFamily: 'inherit',
+          fontWeight: hasValue ? 600 : 400, boxSizing: 'border-box',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>{label}</span>
+        <span style={{ marginLeft: 6, fontSize: 10, color: '#9aa5b4', flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, zIndex: 500,
+          background: '#fff', border: '1px solid #d1d9e6', borderRadius: 8,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4,
+          width: 220, overflow: 'hidden',
+        }}>
+          {/* Clear option */}
+          <div
+            onClick={() => { onChange({ preset: '', from: '', to: '' }); setOpen(false) }}
+            style={{ padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: '#6b7280', borderBottom: '1px solid #f0f0f0' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >All time</div>
+
+          {/* Presets */}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            {DATE_PRESETS.filter(p => p.value !== 'custom').map(p => (
+              <div
+                key={p.value}
+                onClick={() => { onChange({ preset: p.value, from: '', to: '' }); setOpen(false) }}
+                style={{
+                  padding: '8px 12px', fontSize: 12, cursor: 'pointer',
+                  background: datePreset === p.value ? '#eef2ff' : 'transparent',
+                  color: datePreset === p.value ? '#1b3a6b' : '#374151',
+                  fontWeight: datePreset === p.value ? 600 : 400,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}
+                onMouseEnter={e => { if (datePreset !== p.value) e.currentTarget.style.background = '#f8fafc' }}
+                onMouseLeave={e => { if (datePreset !== p.value) e.currentTarget.style.background = 'transparent' }}
+              >
+                {p.label}
+                {datePreset === p.value && <span style={{ fontSize: 10 }}>✓</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Custom range */}
+          <div style={{ borderTop: '1px solid #f0f0f0', padding: '10px 12px' }}>
+            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6, fontWeight: 600 }}>CUSTOM RANGE</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="date" value={dateFrom}
+                onChange={e => { onChange({ preset: 'custom', from: e.target.value, to: dateTo }) }}
+                style={{ flex: 1, fontSize: 11, padding: '5px 6px', border: '1px solid #b0c0d8', borderRadius: 4 }}
+              />
+              <span style={{ fontSize: 10, color: '#9aa5b4' }}>→</span>
+              <input
+                type="date" value={dateTo}
+                onChange={e => { onChange({ preset: 'custom', from: dateFrom, to: e.target.value }) }}
+                style={{ flex: 1, fontSize: 11, padding: '5px 6px', border: '1px solid #b0c0d8', borderRadius: 4 }}
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setOpen(false) }}
+                style={{ marginTop: 8, width: '100%', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 5, padding: '6px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+              >Apply</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
-// ── Sub-components ────────────────────────────────────────────
+// ── Chip ──────────────────────────────────────────────────────
+
+function Chip({ label, onRemove }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e8eef8', color: '#1b3a6b', fontSize: '11px', padding: '3px 8px', borderRadius: '20px', fontWeight: 500 }}>
+      {label}
+      <span onClick={onRemove} style={{ cursor: 'pointer', fontSize: '12px', lineHeight: 1, color: '#6b7280', marginLeft: 2 }}>✕</span>
+    </span>
+  )
+}
+
+// ── NewsCard ──────────────────────────────────────────────────
 
 function AgencyBadge({ slug }) {
   const color = AGENCY_COLORS[slug] ?? '#1a5276'
-  return (
-    <span style={{
-      background: color, color: '#fff', fontSize: '11px',
-      fontWeight: 600, padding: '3px 8px', borderRadius: '4px',
-      whiteSpace: 'nowrap', letterSpacing: '0.02em',
-    }}>{slug}</span>
-  )
+  return <span style={{ background: color, color: '#fff', fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>{slug}</span>
 }
 
 function TagBadge({ tag }) {
   const { bg, color } = getTagStyle(tag)
-  return (
-    <span style={{
-      background: bg, color, fontSize: '11px',
-      padding: '3px 8px', borderRadius: '20px', whiteSpace: 'nowrap',
-    }}>{tag}</span>
-  )
+  return <span style={{ background: bg, color, fontSize: '11px', padding: '3px 8px', borderRadius: '20px', whiteSpace: 'nowrap' }}>{tag}</span>
 }
 
 function NewsCard({ release, onClick }) {
@@ -172,25 +382,16 @@ function NewsCard({ release, onClick }) {
   return (
     <div
       onClick={() => onClick(release)}
-      style={{
-        background: '#fff', border: '0.5px solid #d1d9e6',
-        borderLeft: `3px solid ${agencyColor}`,
-        borderRadius: '0 6px 6px 0', padding: '14px 16px',
-        cursor: 'pointer', transition: 'box-shadow 0.15s',
-      }}
+      style={{ background: '#fff', border: '0.5px solid #d1d9e6', borderLeft: `3px solid ${agencyColor}`, borderRadius: '0 6px 6px 0', padding: '14px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
       onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px', flexWrap: 'wrap' }}>
         <AgencyBadge slug={release.agency_slug} />
         {release.tag && <TagBadge tag={release.tag} />}
-        <span style={{ color: '#9aa5b4', fontSize: '11px', marginLeft: 'auto' }}>
-          {formatDate(release.published_date)}
-        </span>
+        <span style={{ color: '#9aa5b4', fontSize: '11px', marginLeft: 'auto' }}>{formatDate(release.published_date)}</span>
       </div>
-      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1b3a6b', lineHeight: 1.4, marginBottom: '5px' }}>
-        {release.title}
-      </div>
+      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1b3a6b', lineHeight: 1.4, marginBottom: '5px' }}>{release.title}</div>
       {release.summary && (
         <div style={{ fontSize: '12px', color: '#4a5568', lineHeight: 1.6 }}>
           {release.summary.length > 180 ? release.summary.slice(0, 180) + '…' : release.summary}
@@ -206,26 +407,14 @@ function NewsCard({ release, onClick }) {
 function ArticleModal({ release, onClose }) {
   const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from('release_content')
-        .select('extracted_text, scrape_status')
-        .eq('release_id', release.id)
-        .single()
-      setContent(data)
-      setLoading(false)
-    }
-    load()
+    supabase.from('release_content').select('extracted_text, scrape_status').eq('release_id', release.id).single()
+      .then(({ data }) => { setContent(data); setLoading(false) })
   }, [release.id])
-
   const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1b3a6b'
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: '#fff', borderRadius: '10px', maxWidth: '740px', width: '100%', padding: '32px', position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' }}>✕</button>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -234,21 +423,13 @@ function ArticleModal({ release, onClose }) {
         </div>
         <div style={{ fontSize: '11px', color: '#9aa5b4', marginBottom: '12px' }}>{formatDate(release.published_date)}</div>
         <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1b3a6b', lineHeight: 1.3, marginBottom: '14px' }}>{release.title}</h1>
-        {release.summary && (
-          <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.7, marginBottom: '20px', borderLeft: `3px solid ${agencyColor}`, paddingLeft: '14px' }}>{release.summary}</p>
-        )}
+        {release.summary && <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.7, marginBottom: '20px', borderLeft: `3px solid ${agencyColor}`, paddingLeft: '14px' }}>{release.summary}</p>}
         <hr style={{ border: 'none', borderTop: '0.5px solid #e5e7eb', margin: '20px 0' }} />
-        {loading ? (
-          <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading full article...</div>
-        ) : content?.extracted_text && content.scrape_status === 'ok' ? (
-          <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {content.extracted_text.slice(0, 4000)}{content.extracted_text.length > 4000 && '…'}
-          </div>
-        ) : (
-          <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>
-            Full article content will be available after the next crawler run.
-          </div>
-        )}
+        {loading ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading full article...</div>
+          : content?.extracted_text && content.scrape_status === 'ok'
+          ? <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{content.extracted_text.slice(0, 4000)}{content.extracted_text.length > 4000 && '…'}</div>
+          : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>Full article content will be available after the next crawler run.</div>
+        }
         <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '0.5px solid #e5e7eb' }}>
           <a href={release.source_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1b3a6b', color: '#fff', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontWeight: 500, textDecoration: 'none' }}>
             View original on {release.source_url.replace(/https?:\/\//, '').split('/')[0]} ↗
@@ -259,111 +440,94 @@ function ArticleModal({ release, onClose }) {
   )
 }
 
-// ── Saved Searches ────────────────────────────────────────────
+// ── Saved search storage ──────────────────────────────────────
 
 const STORAGE_KEY = 'cagovnews_saved_searches'
+function loadSaved() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
+function saveSaved(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) }
 
-function loadSaved() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
-}
-function saveSaved(searches) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(searches))
-}
+// ── Main ──────────────────────────────────────────────────────
 
-// ── Main Component ────────────────────────────────────────────
+const EMPTY_FILTERS = {
+  search: '',
+  agencies: [],
+  states: [],
+  counties: [],
+  cities: [],
+  tags: [],
+  datePreset: '',
+  dateFrom: '',
+  dateTo: '',
+  sortBy: 'date_desc',
+}
 
 export default function CAGovNewsHomepage() {
-  // Data
   const [releases, setReleases] = useState([])
-  const [agencies, setAgencies] = useState([])
-  const [tags, setTags] = useState([])
-  const [counties, setCounties] = useState([])
-  const [cities, setCities] = useState([])
+  const [allAgencies, setAllAgencies] = useState([])
+  const [allTags, setAllTags] = useState([])
+  const [allCounties, setAllCounties] = useState([])
+  const [allCities, setAllCities] = useState([])
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
   const [selectedRelease, setSelectedRelease] = useState(null)
 
-  // Filters
-  const [search, setSearch] = useState('')
-  const [agencyFilter, setAgencyFilter] = useState('')
-  const [stateFilter, setStateFilter] = useState('')
-  const [countyFilter, setCountyFilter] = useState('')
-  const [cityFilter, setCityFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
-  const [datePreset, setDatePreset] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [sortBy, setSortBy] = useState('date_desc')
+  // Unified filter state
+  const [filters, setFilters] = useState(EMPTY_FILTERS)
 
-  // Filter panel
+  // UI state
   const [filterOpen, setFilterOpen] = useState(false)
-  const [dateDropOpen, setDateDropOpen] = useState(false)
-  const dateDropRef = useRef(null)
-
-  // Saved searches
-  const [savedSearches, setSavedSearches] = useState([])
   const [saveModalOpen, setSaveModalOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
+  const [savedSearches, setSavedSearches] = useState([])
   const [savedMsg, setSavedMsg] = useState('')
+
+  const setF = (key, val) => setFilters(f => ({ ...f, [key]: val }))
 
   // Load reference data
   useEffect(() => {
     setSavedSearches(loadSaved())
 
     supabase.from('agencies').select('slug, name').eq('active', true).order('slug')
-      .then(({ data }) => setAgencies(data ?? []))
+      .then(({ data }) => setAllAgencies((data ?? []).map(a => ({ value: a.slug, label: a.slug }))))
 
     supabase.from('releases').select('tag').not('tag', 'is', null)
-      .then(({ data }) => {
-        const unique = [...new Set((data ?? []).map(r => r.tag))].sort()
-        setTags(unique)
-      })
+      .then(({ data }) => setAllTags([...new Set((data ?? []).map(r => r.tag))].sort()))
 
     supabase.from('releases').select('id', { count: 'exact', head: true })
       .then(({ count }) => setTotalCount(count ?? 0))
 
-    // Load counties + cities from news_sources
-    supabase.from('news_sources').select('county_name, city_name, state_code').not('county_name', 'is', null)
+    supabase.from('news_sources').select('county_name, city_name').not('county_name', 'is', null)
       .then(({ data }) => {
         if (data) {
-          const uniqueCounties = [...new Set(data.map(r => r.county_name).filter(Boolean))].sort()
-          setCounties(uniqueCounties)
-          const uniqueCities = [...new Set(data.map(r => r.city_name).filter(Boolean))].sort()
-          setCities(uniqueCities)
+          setAllCounties([...new Set(data.map(r => r.county_name).filter(Boolean))].sort())
+          setAllCities([...new Set(data.map(r => r.city_name).filter(Boolean))].sort())
         }
       })
   }, [])
 
-  // Close date dropdown on outside click
-  useEffect(() => {
-    function handler(e) {
-      if (dateDropRef.current && !dateDropRef.current.contains(e.target)) setDateDropOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  // Fetch releases
+  // Fetch releases when filters change
   const fetchReleases = useCallback(async () => {
     setLoading(true)
+    const { search, agencies, tags, datePreset, dateFrom, dateTo, sortBy } = filters
 
     let q = supabase.from('releases').select('*').limit(200)
 
-    // Sort
     switch (sortBy) {
-      case 'date_asc':    q = q.order('published_date', { ascending: true }); break
-      case 'title_asc':   q = q.order('title', { ascending: true }); break
-      case 'title_desc':  q = q.order('title', { ascending: false }); break
-      case 'agency_asc':  q = q.order('agency_slug', { ascending: true }); break
-      default:            q = q.order('published_date', { ascending: false })
+      case 'date_asc':   q = q.order('published_date', { ascending: true }); break
+      case 'title_asc':  q = q.order('title', { ascending: true }); break
+      case 'title_desc': q = q.order('title', { ascending: false }); break
+      case 'agency_asc': q = q.order('agency_slug', { ascending: true }); break
+      default:           q = q.order('published_date', { ascending: false })
     }
 
-    // Filters
-    if (agencyFilter) q = q.eq('agency_slug', agencyFilter)
-    if (tagFilter)    q = q.eq('tag', tagFilter)
-    if (search)       q = q.or(`title.ilike.%${search}%,summary.ilike.%${search}%`)
+    if (agencies.length === 1) q = q.eq('agency_slug', agencies[0])
+    else if (agencies.length > 1) q = q.in('agency_slug', agencies)
 
-    // Date range
+    if (tags.length === 1) q = q.eq('tag', tags[0])
+    else if (tags.length > 1) q = q.in('tag', tags)
+
+    if (search) q = q.or(`title.ilike.%${search}%,summary.ilike.%${search}%`)
+
     let from = dateFrom, to = dateTo
     if (datePreset && datePreset !== 'custom') {
       const range = getDateRange(datePreset)
@@ -375,61 +539,58 @@ export default function CAGovNewsHomepage() {
     const { data } = await q
     setReleases(data ?? [])
     setLoading(false)
-  }, [search, agencyFilter, stateFilter, countyFilter, cityFilter, tagFilter, datePreset, dateFrom, dateTo, sortBy])
+  }, [filters])
 
   useEffect(() => { fetchReleases() }, [fetchReleases])
 
-  // Active filter count
-  const activeFilters = [search, agencyFilter, stateFilter, countyFilter, cityFilter, tagFilter, datePreset || dateFrom].filter(Boolean).length
+  const resetFilters = () => setFilters(EMPTY_FILTERS)
 
-  const clearFilters = () => {
-    setSearch(''); setAgencyFilter(''); setStateFilter(''); setCountyFilter('')
-    setCityFilter(''); setTagFilter(''); setDatePreset(''); setDateFrom(''); setDateTo('')
-    setSortBy('date_desc')
-  }
+  const activeCount = [
+    filters.search,
+    ...filters.agencies,
+    ...filters.states,
+    ...filters.counties,
+    ...filters.cities,
+    ...filters.tags,
+    filters.datePreset || filters.dateFrom,
+  ].filter(Boolean).length
 
-  // Date preset label
-  const dateLabel = datePreset
-    ? DATE_PRESETS.find(p => p.value === datePreset)?.label
-    : (dateFrom || dateTo) ? `${dateFrom} → ${dateTo}` : 'Date range'
+  const hasFilters = activeCount > 0 || filters.sortBy !== 'date_desc'
+
+  // Chips
+  const chips = [
+    filters.search && { label: `"${filters.search}"`, clear: () => setF('search', '') },
+    ...filters.agencies.map(a => ({ label: a, clear: () => setF('agencies', filters.agencies.filter(x => x !== a)) })),
+    ...filters.states.map(s => ({ label: s, clear: () => setF('states', filters.states.filter(x => x !== s)) })),
+    ...filters.counties.map(c => ({ label: c, clear: () => setF('counties', filters.counties.filter(x => x !== c)) })),
+    ...filters.cities.map(c => ({ label: c, clear: () => setF('cities', filters.cities.filter(x => x !== c)) })),
+    ...filters.tags.map(t => ({ label: t, clear: () => setF('tags', filters.tags.filter(x => x !== t)) })),
+    (filters.datePreset || filters.dateFrom) && {
+      label: filters.datePreset ? DATE_PRESETS.find(p => p.value === filters.datePreset)?.label : `${filters.dateFrom} → ${filters.dateTo}`,
+      clear: () => setFilters(f => ({ ...f, datePreset: '', dateFrom: '', dateTo: '' }))
+    },
+  ].filter(Boolean)
 
   // Saved searches
-  const currentFilters = { search, agencyFilter, stateFilter, countyFilter, cityFilter, tagFilter, datePreset, dateFrom, dateTo, sortBy }
-
   const saveSearch = () => {
     if (!saveName.trim()) return
-    const entry = { id: Date.now(), name: saveName.trim(), filters: currentFilters, created: new Date().toISOString() }
+    const entry = { id: Date.now(), name: saveName.trim(), filters, created: new Date().toISOString() }
     const updated = [entry, ...savedSearches]
-    setSavedSearches(updated)
-    saveSaved(updated)
-    setSaveName('')
-    setSaveModalOpen(false)
+    setSavedSearches(updated); saveSaved(updated)
+    setSaveName(''); setSaveModalOpen(false)
     setSavedMsg(`"${entry.name}" saved`)
-    setTimeout(() => setSavedMsg(''), 2500)
+    setTimeout(() => setSavedMsg(''), 3000)
   }
 
-  const loadSearch = (entry) => {
-    const f = entry.filters
-    setSearch(f.search || '')
-    setAgencyFilter(f.agencyFilter || '')
-    setStateFilter(f.stateFilter || '')
-    setCountyFilter(f.countyFilter || '')
-    setCityFilter(f.cityFilter || '')
-    setTagFilter(f.tagFilter || '')
-    setDatePreset(f.datePreset || '')
-    setDateFrom(f.dateFrom || '')
-    setDateTo(f.dateTo || '')
-    setSortBy(f.sortBy || 'date_desc')
-    setFilterOpen(false)
-  }
-
+  const loadSearch = (entry) => { setFilters(entry.filters); setFilterOpen(false) }
   const deleteSearch = (id) => {
     const updated = savedSearches.filter(s => s.id !== id)
-    setSavedSearches(updated)
-    saveSaved(updated)
+    setSavedSearches(updated); saveSaved(updated)
   }
 
-  const citiesForCounty = countyFilter ? cities : cities
+  const citiesFiltered = filters.counties.length > 0
+    ? allCities // ideally filter by county, simplified here
+    : allCities
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -457,167 +618,86 @@ export default function CAGovNewsHomepage() {
       <div style={{ background: '#fff', borderBottom: '0.5px solid #d1d9e6', padding: '10px 20px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
-          {/* Top row: search + controls */}
+          {/* Top row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search */}
             <div style={{ flex: '1', minWidth: '200px', position: 'relative' }}>
               <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9aa5b4', fontSize: 14 }}>🔍</span>
-              <input
-                type="text" value={search} onChange={e => setSearch(e.target.value)}
+              <input type="text" value={filters.search} onChange={e => setF('search', e.target.value)}
                 placeholder="Search titles and summaries..."
-                style={{ width: '100%', fontSize: '13px', padding: '7px 12px 7px 30px', border: '1px solid #b0c0d8', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' }}
-              />
+                style={{ width: '100%', fontSize: '13px', padding: '7px 12px 7px 30px', border: '1px solid #b0c0d8', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' }} />
             </div>
 
             {/* Filter toggle */}
-            <button
-              onClick={() => setFilterOpen(v => !v)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: filterOpen || activeFilters > 0 ? '#1b3a6b' : '#fff',
-                color: filterOpen || activeFilters > 0 ? '#fff' : '#374151',
-                border: '1px solid #b0c0d8', borderRadius: '6px',
-                padding: '7px 14px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-              }}
-            >
+            <button onClick={() => setFilterOpen(v => !v)} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: filterOpen || activeCount > 0 ? '#1b3a6b' : '#fff',
+              color: filterOpen || activeCount > 0 ? '#fff' : '#374151',
+              border: '1px solid #b0c0d8', borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+            }}>
               ⚙ Filters
-              {activeFilters > 0 && (
-                <span style={{ background: '#f5a623', color: '#1b3a6b', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700 }}>{activeFilters}</span>
-              )}
+              {activeCount > 0 && <span style={{ background: '#f5a623', color: '#1b3a6b', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700 }}>{activeCount}</span>}
             </button>
 
             {/* Sort */}
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            <select value={filters.sortBy} onChange={e => setF('sortBy', e.target.value)}
               style={{ fontSize: '12px', padding: '7px 10px', border: '1px solid #b0c0d8', borderRadius: '6px', color: '#374151', background: '#fff' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
 
-            {/* Save search */}
-            <button
-              onClick={() => setSaveModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: '1px solid #b0c0d8', borderRadius: '6px', padding: '7px 12px', fontSize: '12px', color: '#374151', cursor: 'pointer' }}
-            >
+            {/* Save */}
+            <button onClick={() => setSaveModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: '1px solid #b0c0d8', borderRadius: '6px', padding: '7px 12px', fontSize: '12px', color: '#374151', cursor: 'pointer' }}>
               🔖 Save
             </button>
 
-            {/* Saved searches dropdown */}
+            {/* Saved dropdown */}
             {savedSearches.length > 0 && (
-              <div style={{ position: 'relative' }}>
-                <select
-                  onChange={e => { const s = savedSearches.find(x => String(x.id) === e.target.value); if (s) loadSearch(s); e.target.value = '' }}
-                  defaultValue=""
-                  style={{ fontSize: '12px', padding: '7px 10px', border: '1px solid #b0c0d8', borderRadius: '6px', color: '#374151', background: '#fff', maxWidth: 160 }}
-                >
-                  <option value="">📂 Saved ({savedSearches.length})</option>
-                  {savedSearches.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
+              <select onChange={e => { const s = savedSearches.find(x => String(x.id) === e.target.value); if (s) loadSearch(s); e.target.value = '' }} defaultValue=""
+                style={{ fontSize: '12px', padding: '7px 10px', border: '1px solid #b0c0d8', borderRadius: '6px', color: '#374151', background: '#fff', maxWidth: 160 }}>
+                <option value="">📂 Saved ({savedSearches.length})</option>
+                {savedSearches.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             )}
 
-            {activeFilters > 0 && (
-              <button onClick={clearFilters} style={{ fontSize: '12px', padding: '7px 12px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', color: '#6b7280', cursor: 'pointer' }}>
-                Clear ✕
+            {/* Reset */}
+            {hasFilters && (
+              <button onClick={resetFilters} style={{ fontSize: '12px', padding: '7px 12px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff5f5', color: '#dc2626', cursor: 'pointer', fontWeight: 500 }}>
+                ↺ Reset
               </button>
             )}
           </div>
 
           {/* Expanded filter panel */}
           {filterOpen && (
-            <div style={{ marginTop: 12, padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+            <div style={{ marginTop: 12, padding: '16px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
-                {/* Department */}
-                <div>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>DEPARTMENT</label>
-                  <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)}
-                    style={{ width: '100%', fontSize: '12px', padding: '7px 8px', border: '1px solid #b0c0d8', borderRadius: '5px', color: '#374151', background: '#fff' }}>
-                    <option value="">All Departments</option>
-                    {agencies.map(a => <option key={a.slug} value={a.slug}>{a.slug}</option>)}
-                  </select>
-                </div>
+                <MultiSelect label="Department" options={allAgencies} selected={filters.agencies} onChange={v => setF('agencies', v)} placeholder="All Departments" maxWidth={200} />
+                <MultiSelect label="State" options={STATES.map(s => ({ value: s.code, label: s.name }))} selected={filters.states} onChange={v => setF('states', v)} placeholder="All States" maxWidth={160} />
+                <MultiSelect label="County" options={allCounties} selected={filters.counties} onChange={v => { setF('counties', v); setF('cities', []) }} placeholder="All Counties" maxWidth={180} />
+                <MultiSelect label="City" options={citiesFiltered} selected={filters.cities} onChange={v => setF('cities', v)} placeholder="All Cities" maxWidth={180} />
+                <MultiSelect label="Topic" options={allTags} selected={filters.tags} onChange={v => setF('tags', v)} placeholder="All Topics" maxWidth={180} />
 
-                {/* State */}
-                <div>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>STATE</label>
-                  <select value={stateFilter} onChange={e => setStateFilter(e.target.value)}
-                    style={{ width: '100%', fontSize: '12px', padding: '7px 8px', border: '1px solid #b0c0d8', borderRadius: '5px', color: '#374151', background: '#fff' }}>
-                    <option value="">All States</option>
-                    <option value="CA">California</option>
-                  </select>
-                </div>
+                <DateRangeSelect
+                  datePreset={filters.datePreset}
+                  dateFrom={filters.dateFrom}
+                  dateTo={filters.dateTo}
+                  onChange={({ preset, from, to }) => setFilters(f => ({ ...f, datePreset: preset, dateFrom: from, dateTo: to }))}
+                />
 
-                {/* County */}
-                <div>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>COUNTY</label>
-                  <select value={countyFilter} onChange={e => { setCountyFilter(e.target.value); setCityFilter('') }}
-                    style={{ width: '100%', fontSize: '12px', padding: '7px 8px', border: '1px solid #b0c0d8', borderRadius: '5px', color: '#374151', background: '#fff' }}>
-                    <option value="">All Counties</option>
-                    {counties.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                {/* City */}
-                <div>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>CITY</label>
-                  <select value={cityFilter} onChange={e => setCityFilter(e.target.value)}
-                    style={{ width: '100%', fontSize: '12px', padding: '7px 8px', border: '1px solid #b0c0d8', borderRadius: '5px', color: '#374151', background: '#fff' }}>
-                    <option value="">All Cities</option>
-                    {citiesForCounty.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                {/* Topic */}
-                <div>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>TOPIC</label>
-                  <select value={tagFilter} onChange={e => setTagFilter(e.target.value)}
-                    style={{ width: '100%', fontSize: '12px', padding: '7px 8px', border: '1px solid #b0c0d8', borderRadius: '5px', color: '#374151', background: '#fff' }}>
-                    <option value="">All Topics</option>
-                    {tags.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-
-                {/* Date range */}
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4, fontWeight: 500 }}>DATE RANGE</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {DATE_PRESETS.map(p => (
-                      <button
-                        key={p.value}
-                        onClick={() => { setDatePreset(p.value); if (p.value !== 'custom') { setDateFrom(''); setDateTo('') } }}
-                        style={{
-                          fontSize: '11px', padding: '4px 10px',
-                          borderRadius: '20px', cursor: 'pointer',
-                          border: `1px solid ${datePreset === p.value ? '#1b3a6b' : '#d1d9e6'}`,
-                          background: datePreset === p.value ? '#1b3a6b' : '#fff',
-                          color: datePreset === p.value ? '#fff' : '#374151',
-                          fontWeight: datePreset === p.value ? 600 : 400,
-                        }}
-                      >{p.label}</button>
-                    ))}
-                  </div>
-                  {datePreset === 'custom' && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                        style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #b0c0d8', borderRadius: '5px' }} />
-                      <span style={{ fontSize: '12px', color: '#6b7280' }}>to</span>
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                        style={{ fontSize: '12px', padding: '6px 8px', border: '1px solid #b0c0d8', borderRadius: '5px' }} />
-                    </div>
-                  )}
+                {/* Reset inside panel */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 0 }}>
+                  <button onClick={resetFilters} style={{ marginTop: 20, fontSize: '12px', padding: '7px 16px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff5f5', color: '#dc2626', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    ↺ Reset all
+                  </button>
                 </div>
               </div>
 
-              {/* Active filter chips */}
-              {activeFilters > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#6b7280' }}>Active:</span>
-                  {search && <Chip label={`"${search}"`} onRemove={() => setSearch('')} />}
-                  {agencyFilter && <Chip label={agencyFilter} onRemove={() => setAgencyFilter('')} />}
-                  {stateFilter && <Chip label={stateFilter} onRemove={() => setStateFilter('')} />}
-                  {countyFilter && <Chip label={countyFilter} onRemove={() => setCountyFilter('')} />}
-                  {cityFilter && <Chip label={cityFilter} onRemove={() => setCityFilter('')} />}
-                  {tagFilter && <Chip label={tagFilter} onRemove={() => setTagFilter('')} />}
-                  {(datePreset || dateFrom) && <Chip label={dateLabel} onRemove={() => { setDatePreset(''); setDateFrom(''); setDateTo('') }} />}
+              {/* Active chips */}
+              {chips.length > 0 && (
+                <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>Active filters:</span>
+                  {chips.map((c, i) => <Chip key={i} label={c.label} onRemove={c.clear} />)}
                 </div>
               )}
             </div>
@@ -636,16 +716,14 @@ export default function CAGovNewsHomepage() {
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px' }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[...Array(8)].map((_, i) => (
-              <div key={i} style={{ background: '#fff', borderRadius: '6px', height: '100px', border: '0.5px solid #d1d9e6' }} />
-            ))}
+            {[...Array(8)].map((_, i) => <div key={i} style={{ background: '#fff', borderRadius: '6px', height: '100px', border: '0.5px solid #d1d9e6' }} />)}
           </div>
         ) : releases.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', color: '#9aa5b4' }}>
             <div style={{ fontSize: '32px', marginBottom: 12 }}>🔍</div>
             <div style={{ fontSize: '16px', marginBottom: '8px' }}>No releases found</div>
             <div style={{ fontSize: '13px', marginBottom: 16 }}>Try adjusting your filters</div>
-            <button onClick={clearFilters} style={{ fontSize: '13px', padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Clear all filters</button>
+            <button onClick={resetFilters} style={{ fontSize: '13px', padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Reset filters</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -674,28 +752,15 @@ export default function CAGovNewsHomepage() {
           <div style={{ background: '#fff', borderRadius: '10px', padding: '28px', width: '100%', maxWidth: '380px' }}>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#1b3a6b', marginBottom: '6px' }}>Save this search</div>
             <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>
-              {activeFilters === 0 ? 'No filters active — saves current sort only.' : `Saves ${activeFilters} active filter${activeFilters > 1 ? 's' : ''}.`}
+              {chips.length === 0 ? 'No filters active — saves current sort only.' : `Saving ${chips.length} active filter${chips.length > 1 ? 's' : ''}.`}
             </div>
-            <input
-              autoFocus
-              type="text" value={saveName} onChange={e => setSaveName(e.target.value)}
+            <input autoFocus type="text" value={saveName} onChange={e => setSaveName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveSearch()}
               placeholder="e.g. LA County Housing News"
-              style={{ width: '100%', fontSize: '14px', padding: '9px 12px', border: '1px solid #b0c0d8', borderRadius: '6px', boxSizing: 'border-box', marginBottom: 12, outline: 'none' }}
-            />
-            {/* Preview of filters being saved */}
-            <div style={{ background: '#f8fafc', borderRadius: 6, padding: '8px 12px', marginBottom: 14, fontSize: 11, color: '#6b7280' }}>
-              {[
-                search && `Keyword: "${search}"`,
-                agencyFilter && `Dept: ${agencyFilter}`,
-                stateFilter && `State: ${stateFilter}`,
-                countyFilter && `County: ${countyFilter}`,
-                cityFilter && `City: ${cityFilter}`,
-                tagFilter && `Topic: ${tagFilter}`,
-                (datePreset || dateFrom) && `Date: ${dateLabel}`,
-                sortBy !== 'date_desc' && `Sort: ${SORT_OPTIONS.find(o => o.value === sortBy)?.label}`,
-              ].filter(Boolean).map((f, i) => <div key={i}>· {f}</div>)}
-              {activeFilters === 0 && <div>· No filters</div>}
+              style={{ width: '100%', fontSize: '14px', padding: '9px 12px', border: '1px solid #b0c0d8', borderRadius: '6px', boxSizing: 'border-box', marginBottom: 12, outline: 'none' }} />
+            <div style={{ background: '#f8fafc', borderRadius: 6, padding: '8px 12px', marginBottom: 14, fontSize: 11, color: '#6b7280', maxHeight: 120, overflowY: 'auto' }}>
+              {chips.length === 0 ? <div>· No filters</div> : chips.map((c, i) => <div key={i}>· {c.label}</div>)}
+              {filters.sortBy !== 'date_desc' && <div>· Sort: {SORT_OPTIONS.find(o => o.value === filters.sortBy)?.label}</div>}
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setSaveModalOpen(false)} style={{ padding: '8px 16px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
@@ -705,25 +770,24 @@ export default function CAGovNewsHomepage() {
         </div>
       )}
 
-      {/* Saved searches manager */}
-      {savedSearches.length > 0 && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 500 }}>
-          {savedMsg && (
-            <div style={{ background: '#1b3a6b', color: '#fff', padding: '8px 14px', borderRadius: '6px', fontSize: '12px', marginBottom: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', animation: 'fadeIn 0.2s' }}>
-              🔖 {savedMsg}
+      {/* Toast */}
+      {savedMsg && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 3000, background: '#1b3a6b', color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          🔖 {savedMsg}
+        </div>
+      )}
+
+      {/* Manage saved searches */}
+      {savedSearches.length > 0 && saveModalOpen === false && (
+        <div style={{ display: 'none' }}>
+          {savedSearches.map(s => (
+            <div key={s.id}>
+              {s.name}
+              <button onClick={() => deleteSearch(s.id)}>×</button>
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
-  )
-}
-
-function Chip({ label, onRemove }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e8eef8', color: '#1b3a6b', fontSize: '11px', padding: '3px 8px', borderRadius: '20px', fontWeight: 500 }}>
-      {label}
-      <span onClick={onRemove} style={{ cursor: 'pointer', fontSize: '12px', lineHeight: 1, color: '#6b7280' }}>✕</span>
-    </span>
   )
 }
