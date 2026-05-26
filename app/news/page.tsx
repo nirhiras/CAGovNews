@@ -867,7 +867,8 @@ export default function CAGovNewsHomepage() {
   const [subEmail, setSubEmail]             = useState('')
   const [subFirstName, setSubFirstName]     = useState('')
   const [subLastName, setSubLastName]       = useState('')
-  const [subFreq, setSubFreq]               = useState('daily')
+  const [subFreqs, setSubFreqs]             = useState(['realtime','daily','weekly'])
+  const [subFreqError, setSubFreqError]     = useState(false)
   const [subTopics, setSubTopics]           = useState([])
   const [subAgencies, setSubAgencies]       = useState([])
   const [subPrimaryCounty, setSubPrimaryCounty] = useState('')
@@ -1195,7 +1196,7 @@ export default function CAGovNewsHomepage() {
           'Solano','Sonoma','Stanislaus','Sutter','Tehama','Trinity','Tulare',
           'Tuolumne','Ventura','Yolo','Yuba'
         ]
-        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed
+        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed && subFreqs.length > 0
         return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => e.target === e.currentTarget && setSubOpen(false)}>
@@ -1218,7 +1219,7 @@ export default function CAGovNewsHomepage() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#1b3a6b' }}>You&apos;re subscribed!</div>
                 <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, maxWidth: 360 }}>
                   A confirmation email is on its way to <strong>{subEmail}</strong>.<br/>
-                  You&apos;ll receive your {subFreq} digest covering <strong>{subPrimaryCounty} County</strong>
+                  You&apos;ll receive your {subFreqs.join(', ')} digest covering <strong>{subPrimaryCounty} County</strong>
                   {subExtraCounties.length > 0 && ` and ${subExtraCounties.length} additional county${subExtraCounties.length > 1 ? 'ies' : 'y'}`}.
                 </div>
                 <button onClick={() => setSubOpen(false)} style={{ marginTop: 8, padding: '10px 24px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Done</button>
@@ -1296,20 +1297,35 @@ export default function CAGovNewsHomepage() {
 
                   {/* Frequency */}
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Delivery frequency</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+                      Delivery frequency
+                      <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(all selected by default — deselect any you don&apos;t want)</span>
+                    </label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {[
                         { val: 'realtime', label: '⚡ Real-time', desc: 'As published' },
                         { val: 'daily',    label: '☀️ Daily',     desc: 'Morning digest' },
                         { val: 'weekly',   label: '📅 Weekly',    desc: 'Monday recap' },
-                      ].map(f => (
-                        <div key={f.val} onClick={() => setSubFreq(f.val)}
-                          style={{ flex: 1, padding: '10px 8px', border: `2px solid ${subFreq === f.val ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 8, cursor: 'pointer', textAlign: 'center', background: subFreq === f.val ? '#eef2ff' : '#fafafa', transition: 'all .12s' }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: subFreq === f.val ? '#1b3a6b' : '#374151' }}>{f.label}</div>
-                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{f.desc}</div>
-                        </div>
-                      ))}
+                      ].map(f => {
+                        const on = subFreqs.includes(f.val)
+                        return (
+                          <div key={f.val}
+                            onClick={() => {
+                              setSubFreqError(false)
+                              setSubFreqs(prev => {
+                                if (on && prev.length === 1) { setSubFreqError(true); return prev }
+                                return on ? prev.filter(x => x !== f.val) : [...prev, f.val]
+                              })
+                            }}
+                            style={{ flex: 1, padding: '10px 8px', border: `2px solid ${on ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 8, cursor: 'pointer', textAlign: 'center', background: on ? '#eef2ff' : '#fafafa', transition: 'all .12s', position: 'relative' }}>
+                            {on && <span style={{ position: 'absolute', top: 6, right: 8, fontSize: 11, color: '#1b3a6b', fontWeight: 700 }}>✓</span>}
+                            <div style={{ fontSize: 13, fontWeight: 600, color: on ? '#1b3a6b' : '#9ca3af' }}>{f.label}</div>
+                            <div style={{ fontSize: 11, color: on ? '#6b7280' : '#d1d5db', marginTop: 2 }}>{f.desc}</div>
+                          </div>
+                        )
+                      })}
                     </div>
+                    {subFreqError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 5 }}>⚠ You must select at least one delivery frequency</div>}
                   </div>
 
                   {/* Topics */}
@@ -1387,6 +1403,7 @@ export default function CAGovNewsHomepage() {
                         else if (!emailRe.test(subEmail.trim())) { setSubEmailError('Please enter a valid email'); valid = false }
                         if (!subPrimaryCounty) { setSubCountyError('Please select your county'); valid = false }
                         if (!subAgreed) { setSubAgreeError(true); valid = false }
+                        if (subFreqs.length === 0) { setSubFreqError(true); valid = false }
                         if (!valid) return
                         setSubDone(true)
                       }}
@@ -1401,17 +1418,6 @@ export default function CAGovNewsHomepage() {
         </div>
         )
       })()}
-
-      {/* Save search modal */} subEmail.trim() ? 'pointer' : 'not-allowed', background: subEmail.trim() ? '#f5a623' : '#e5e7eb', color: subEmail.trim() ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
-                      Subscribe →
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Save search modal */}
       {saveModalOpen && (
