@@ -865,12 +865,18 @@ export default function CAGovNewsHomepage() {
   const [saveModalOpen, setSaveModalOpen]   = useState(false)
   const [subOpen, setSubOpen]               = useState(false)
   const [subEmail, setSubEmail]             = useState('')
-  const [subName, setSubName]               = useState('')
+  const [subFirstName, setSubFirstName]     = useState('')
+  const [subLastName, setSubLastName]       = useState('')
   const [subFreq, setSubFreq]               = useState('daily')
   const [subTopics, setSubTopics]           = useState([])
   const [subAgencies, setSubAgencies]       = useState([])
+  const [subPrimaryCounty, setSubPrimaryCounty] = useState('')
+  const [subExtraCounties, setSubExtraCounties] = useState([])
+  const [subAgreed, setSubAgreed]           = useState(false)
   const [subDone, setSubDone]               = useState(false)
   const [subEmailError, setSubEmailError]   = useState('')
+  const [subCountyError, setSubCountyError] = useState('')
+  const [subAgreeError, setSubAgreeError]   = useState(false)
   const [saveName, setSaveName]           = useState('')
   const [savedSearches, setSavedSearches] = useState([])
   const [savedMsg, setSavedMsg]           = useState('')
@@ -1176,26 +1182,24 @@ export default function CAGovNewsHomepage() {
           <div style={{ display: 'flex', gap: '16px' }}>
             {['Privacy', 'Contact', 'RSS'].map(l => <span key={l} style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>{l}</span>)}
           </div>
-        </div>
-      </div>
-
-      {/* Article modal */}
-      {selectedRelease && (
-        <ArticleModal
-          release={selectedRelease}
-          onClose={() => setSelectedRelease(null)}
-          savedArticles={savedArticles}
-          setSavedArticles={setSavedArticles}
-          favArticles={favArticles}
-          setFavArticles={setFavArticles}
-        />
-      )}
-
-      {/* ── Subscribe modal ── */}
-      {subOpen && (
+        </d      {/* ── Subscribe modal ── */}
+      {subOpen && (() => {
+        const CA_COUNTIES = [
+          'Alameda','Alpine','Amador','Butte','Calaveras','Colusa','Contra Costa',
+          'Del Norte','El Dorado','Fresno','Glenn','Humboldt','Imperial','Inyo',
+          'Kern','Kings','Lake','Lassen','Los Angeles','Madera','Marin','Mariposa',
+          'Mendocino','Merced','Modoc','Mono','Monterey','Napa','Nevada','Orange',
+          'Placer','Plumas','Riverside','Sacramento','San Benito','San Bernardino',
+          'San Diego','San Francisco','San Joaquin','San Luis Obispo','San Mateo',
+          'Santa Barbara','Santa Clara','Santa Cruz','Shasta','Sierra','Siskiyou',
+          'Solano','Sonoma','Stanislaus','Sutter','Tehama','Trinity','Tulare',
+          'Tuolumne','Ventura','Yolo','Yuba'
+        ]
+        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed
+        return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => e.target === e.currentTarget && setSubOpen(false)}>
-          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 500, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,.22)', overflow: 'hidden' }}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,.22)', overflow: 'hidden' }}>
 
             {/* Header */}
             <div style={{ background: '#1b3a6b', padding: '20px 24px', flexShrink: 0 }}>
@@ -1209,43 +1213,85 @@ export default function CAGovNewsHomepage() {
             </div>
 
             {subDone ? (
-              /* Success state */
               <div style={{ padding: '40px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                 <div style={{ fontSize: 48 }}>✅</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#1b3a6b' }}>You&apos;re subscribed!</div>
-                <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, maxWidth: 340 }}>
-                  A confirmation email is on its way to <strong>{subEmail}</strong>. You&apos;ll start receiving your {subFreq} digest soon.
+                <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, maxWidth: 360 }}>
+                  A confirmation email is on its way to <strong>{subEmail}</strong>.<br/>
+                  You&apos;ll receive your {subFreq} digest covering <strong>{subPrimaryCounty} County</strong>
+                  {subExtraCounties.length > 0 && ` and ${subExtraCounties.length} additional county${subExtraCounties.length > 1 ? 'ies' : 'y'}`}.
                 </div>
-                <button onClick={() => setSubOpen(false)} style={{ marginTop: 8, padding: '10px 24px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  Done
-                </button>
+                <button onClick={() => setSubOpen(false)} style={{ marginTop: 8, padding: '10px 24px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Done</button>
               </div>
             ) : (
               <>
-                {/* Scrollable body */}
                 <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', flex: 1 }}>
 
-                  {/* Name + Email */}
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
+                  {/* Name row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>First name</label>
-                      <input
-                        type="text" value={subName} onChange={e => setSubName(e.target.value)}
-                        placeholder="Jane"
-                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }}
-                      />
+                      <input type="text" value={subFirstName} onChange={e => setSubFirstName(e.target.value)} placeholder="Jane"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
-                        Email <span style={{ color: '#dc2626' }}>*</span>
-                      </label>
-                      <input
-                        type="email" value={subEmail} onChange={e => { setSubEmail(e.target.value); if (subEmailError) setSubEmailError('') }}
-                        placeholder="you@example.com"
-                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subEmailError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subEmailError ? '#fff5f5' : '#fff' }}
-                      />
-                      {subEmailError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subEmailError}</div>}
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>Last name</label>
+                      <input type="text" value={subLastName} onChange={e => setSubLastName(e.target.value)} placeholder="Smith"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
                     </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                      Email address <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input type="email" value={subEmail} onChange={e => { setSubEmail(e.target.value); if (subEmailError) setSubEmailError('') }} placeholder="you@example.com"
+                      style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subEmailError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subEmailError ? '#fff5f5' : '#fff' }} />
+                    {subEmailError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subEmailError}</div>}
+                  </div>
+
+                  {/* Primary county */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                      Your county <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <select value={subPrimaryCounty} onChange={e => { setSubPrimaryCounty(e.target.value); if (subCountyError) setSubCountyError('') }}
+                      style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subCountyError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subCountyError ? '#fff5f5' : '#fff', color: subPrimaryCounty ? '#111' : '#9ca3af' }}>
+                      <option value="">Select your county…</option>
+                      {CA_COUNTIES.map(c => <option key={c} value={c}>{c} County</option>)}
+                    </select>
+                    {subCountyError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subCountyError}</div>}
+                    {subPrimaryCounty && (
+                      <div style={{ marginTop: 6, fontSize: 12, color: '#059669', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 6, padding: '6px 10px' }}>
+                        ✓ You&apos;ll automatically receive news for <strong>{subPrimaryCounty} County</strong> and all cities within it
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Additional counties */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+                      Also subscribe to additional counties
+                      <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(optional)</span>
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 110, overflowY: 'auto', padding: 2 }}>
+                      {CA_COUNTIES.filter(c => c !== subPrimaryCounty).map(c => {
+                        const on = subExtraCounties.includes(c)
+                        return (
+                          <button key={c} onClick={() => setSubExtraCounties(prev => on ? prev.filter(x => x !== c) : [...prev, c])}
+                            style={{ padding: '4px 9px', fontSize: 11, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .1s', whiteSpace: 'nowrap' }}>
+                            {c}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {subExtraCounties.length > 0 && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280' }}>
+                        {subExtraCounties.length} additional {subExtraCounties.length === 1 ? 'county' : 'counties'} selected
+                        <button onClick={() => setSubExtraCounties([])} style={{ marginLeft: 8, fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear all</button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Frequency */}
@@ -1253,9 +1299,9 @@ export default function CAGovNewsHomepage() {
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Delivery frequency</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {[
-                        { val: 'realtime', label: '⚡ Real-time',  desc: 'As published' },
-                        { val: 'daily',    label: '☀️ Daily',      desc: 'Morning digest' },
-                        { val: 'weekly',   label: '📅 Weekly',     desc: 'Monday recap' },
+                        { val: 'realtime', label: '⚡ Real-time', desc: 'As published' },
+                        { val: 'daily',    label: '☀️ Daily',     desc: 'Morning digest' },
+                        { val: 'weekly',   label: '📅 Weekly',    desc: 'Monday recap' },
                       ].map(f => (
                         <div key={f.val} onClick={() => setSubFreq(f.val)}
                           style={{ flex: 1, padding: '10px 8px', border: `2px solid ${subFreq === f.val ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 8, cursor: 'pointer', textAlign: 'center', background: subFreq === f.val ? '#eef2ff' : '#fafafa', transition: 'all .12s' }}>
@@ -1269,10 +1315,11 @@ export default function CAGovNewsHomepage() {
                   {/* Topics */}
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
-                      Topics <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(optional — leave blank for all)</span>
+                      Topics
+                      <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(optional — leave blank for all)</span>
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {['Public Safety', 'Health', 'Environment', 'Housing', 'Technology', 'Budget', 'Education', 'Wildfire', 'Insurance', 'Climate', 'Energy', 'Veterans', 'Civil Rights', 'Elections'].map(t => {
+                      {['Public Safety','Health','Environment','Housing','Technology','Budget','Education','Wildfire','Insurance','Climate','Energy','Veterans','Civil Rights','Elections'].map(t => {
                         const on = subTopics.includes(t)
                         return (
                           <button key={t} onClick={() => setSubTopics(prev => on ? prev.filter(x => x !== t) : [...prev, t])}
@@ -1284,48 +1331,78 @@ export default function CAGovNewsHomepage() {
                     </div>
                   </div>
 
-                  {/* Agencies */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
-                      Departments <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(optional)</span>
-                    </label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {['Governor', 'CDPH', 'DOJ / AG', 'Caltrans', 'CDT', 'CARB', 'CalVet', 'CDCR', 'DCC', 'EDD', 'CDE', 'DHCS', 'Cal OES', 'DMV', 'CalPERS'].map(a => {
-                        const on = subAgencies.includes(a)
-                        return (
-                          <button key={a} onClick={() => setSubAgencies(prev => on ? prev.filter(x => x !== a) : [...prev, a])}
-                            style={{ padding: '5px 10px', fontSize: 12, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .12s' }}>
-                            {a}
-                          </button>
-                        )
-                      })}
+                  {/* Privacy statement */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8 }}>🔒 Privacy &amp; Terms</div>
+                    <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.65, margin: '0 0 8px' }}>
+                      CAGovNews.com collects your name, email address, and county preferences solely to deliver your requested news digest.
+                      We will <strong>never sell, share, or rent</strong> your personal information to third parties.
+                      Your data is stored securely and used only for sending your selected content.
+                    </p>
+                    <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.65, margin: '0 0 8px' }}>
+                      You may unsubscribe at any time using the link included in every email.
+                      Unsubscribing removes your email from all CAGovNews mailing lists within 24 hours.
+                    </p>
+                    <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.65, margin: 0 }}>
+                      CAGovNews.com is an independent news aggregator and is not affiliated with the State of California.
+                      All content is sourced from official California .gov agency websites.
+                      Full privacy policy: <a href="#" style={{ color: '#1b3a6b' }}>cagovnews.com/privacy</a>
+                    </p>
+                  </div>
+
+                  {/* Agreement checkbox */}
+                  <div
+                    onClick={() => { setSubAgreed(v => !v); setSubAgreeError(false) }}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', border: `1px solid ${subAgreeError ? '#dc2626' : subAgreed ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 8, background: subAgreed ? '#eef2ff' : subAgreeError ? '#fff5f5' : '#fafafa', transition: 'all .12s' }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginTop: 1, border: `2px solid ${subAgreed ? '#1b3a6b' : subAgreeError ? '#dc2626' : '#d1d5db'}`, background: subAgreed ? '#1b3a6b' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {subAgreed && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: subAgreed ? '#1b3a6b' : '#374151', fontWeight: subAgreed ? 500 : 400, lineHeight: 1.5 }}>
+                        I agree to receive email news digests from <strong>CAGovNews.com</strong> and I have read and accept the{' '}
+                        <a href="#" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b' }}>Privacy Policy</a>
+                        {' '}and{' '}
+                        <a href="#" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b' }}>Terms of Service</a>.
+                        <span style={{ color: '#dc2626' }}> *</span>
+                      </span>
+                      {subAgreeError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>⚠ You must agree to the terms to subscribe</div>}
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.5 }}>
-                    By subscribing you agree to receive email from CAGovNews. Unsubscribe at any time. We never share your email.
-                  </div>
                 </div>
 
                 {/* Footer */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid #e8e8e4', background: '#fafaf8', flexShrink: 0 }}>
-                  <div style={{ fontSize: 12, color: '#9ca3af' }}>
-                    {subTopics.length > 0 && `${subTopics.length} topic${subTopics.length > 1 ? 's' : ''}`}
-                    {subTopics.length > 0 && subAgencies.length > 0 && ' · '}
-                    {subAgencies.length > 0 && `${subAgencies.length} dept${subAgencies.length > 1 ? 's' : ''}`}
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                    {subPrimaryCounty && <span>📍 {subPrimaryCounty}{subExtraCounties.length > 0 ? ` +${subExtraCounties.length}` : ''}</span>}
+                    {subTopics.length > 0 && <span> · {subTopics.length} topic{subTopics.length > 1 ? 's' : ''}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => setSubOpen(false)} style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
                     <button
                       onClick={() => {
+                        let valid = true
                         const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                        if (!subEmail.trim()) { setSubEmailError('Email is required'); return }
-                        if (!emailRe.test(subEmail.trim())) { setSubEmailError('Please enter a valid email'); return }
-                        setSubEmailError('')
+                        if (!subEmail.trim()) { setSubEmailError('Email is required'); valid = false }
+                        else if (!emailRe.test(subEmail.trim())) { setSubEmailError('Please enter a valid email'); valid = false }
+                        if (!subPrimaryCounty) { setSubCountyError('Please select your county'); valid = false }
+                        if (!subAgreed) { setSubAgreeError(true); valid = false }
+                        if (!valid) return
                         setSubDone(true)
                       }}
-                      disabled={!subEmail.trim()}
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, cursor: subEmail.trim() ? 'pointer' : 'not-allowed', background: subEmail.trim() ? '#f5a623' : '#e5e7eb', color: subEmail.trim() ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, cursor: canSubmit ? 'pointer' : 'default', background: canSubmit ? '#f5a623' : '#e5e7eb', color: canSubmit ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
+                      Subscribe →
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        )
+      })()}
+
+      {/* Save search modal */} subEmail.trim() ? 'pointer' : 'not-allowed', background: subEmail.trim() ? '#f5a623' : '#e5e7eb', color: subEmail.trim() ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
                       Subscribe →
                     </button>
                   </div>
