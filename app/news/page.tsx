@@ -864,6 +864,10 @@ export default function CAGovNewsHomepage() {
   const [filterOpen, setFilterOpen]       = useState(false)
   const [saveModalOpen, setSaveModalOpen]   = useState(false)
   const [subOpen, setSubOpen]               = useState(false)
+  const [unsubOpen, setUnsubOpen]           = useState(false)
+  const [unsubEmail, setUnsubEmail]         = useState('')
+  const [unsubDone, setUnsubDone]           = useState(false)
+  const [unsubError, setUnsubError]         = useState('')
   const [subEmail, setSubEmail]             = useState('')
   const [subFirstName, setSubFirstName]     = useState('')
   const [subLastName, setSubLastName]       = useState('')
@@ -1180,8 +1184,11 @@ export default function CAGovNewsHomepage() {
       <div style={{ background: '#1b3a6b', borderTop: '3px solid #f5a623', padding: '16px 20px', marginTop: '40px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: '#93c5fd', fontSize: '11px' }}>© 2026 CAGovNews.com · All content sourced from official California .gov websites · Not affiliated with the State of California</span>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            {['Privacy', 'Contact', 'RSS'].map(l => <span key={l} style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>{l}</span>)}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <a href="/privacy" style={{ color: '#93c5fd', fontSize: '11px', textDecoration: 'none' }}>Privacy Policy</a>
+            <button onClick={() => { setUnsubOpen(true); setUnsubDone(false); setUnsubEmail(''); setUnsubError('') }} style={{ color: '#93c5fd', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Unsubscribe</button>
+            <span style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>Contact</span>
+            <span style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>RSS</span>
           </div>
         </d      {/* ── Subscribe modal ── */}
       {subOpen && (() => {
@@ -1362,7 +1369,7 @@ export default function CAGovNewsHomepage() {
                     <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.65, margin: 0 }}>
                       CAGovNews.com is an independent news aggregator and is not affiliated with the State of California.
                       All content is sourced from official California .gov agency websites.
-                      Full privacy policy: <a href="#" style={{ color: '#1b3a6b' }}>cagovnews.com/privacy</a>
+                      Full privacy policy: <a href="/privacy" target="_blank" rel="noopener" style={{ color: '#1b3a6b', fontWeight: 500 }}>cagovnews.com/privacy</a>
                     </p>
                   </div>
 
@@ -1376,9 +1383,9 @@ export default function CAGovNewsHomepage() {
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 13, color: subAgreed ? '#1b3a6b' : '#374151', fontWeight: subAgreed ? 500 : 400, lineHeight: 1.5 }}>
                         I agree to receive email news digests from <strong>CAGovNews.com</strong> and I have read and accept the{' '}
-                        <a href="#" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b' }}>Privacy Policy</a>
+                        <a href="/privacy" target="_blank" rel="noopener" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b', fontWeight: 600 }}>Privacy Policy</a>
                         {' '}and{' '}
-                        <a href="#" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b' }}>Terms of Service</a>.
+                        <a href="/privacy#terms" target="_blank" rel="noopener" onClick={e => e.stopPropagation()} style={{ color: '#1b3a6b', fontWeight: 600 }}>Terms of Service</a>.
                         <span style={{ color: '#dc2626' }}> *</span>
                       </span>
                       {subAgreeError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>⚠ You must agree to the terms to subscribe</div>}
@@ -1418,6 +1425,70 @@ export default function CAGovNewsHomepage() {
         </div>
         )
       })()}
+
+      {/* ── Unsubscribe modal ── */}
+      {unsubOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setUnsubOpen(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 12px 48px rgba(0,0,0,.22)', overflow: 'hidden' }}>
+            <div style={{ background: '#7f1d1d', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>📭 Unsubscribe from CAGovNews</div>
+                <div style={{ color: '#fca5a5', fontSize: 12, marginTop: 2 }}>You can re-subscribe at any time</div>
+              </div>
+              <button onClick={() => setUnsubOpen(false)} style={{ background: 'none', border: 'none', color: '#fca5a5', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ padding: '22px 22px 0' }}>
+              {unsubDone ? (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '16px', marginBottom: 22, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 22 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#166534', marginBottom: 4 }}>Unsubscribe request received</div>
+                    <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+                      <strong>{unsubEmail}</strong> will be removed from all CAGovNews mailing lists within 24 hours. A confirmation email is on its way.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                    Enter your email address to unsubscribe from all CAGovNews email digests. You can re-subscribe at any time from the main page.
+                  </p>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>Email address</label>
+                    <input type="email" value={unsubEmail}
+                      onChange={e => { setUnsubEmail(e.target.value); if (unsubError) setUnsubError('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') {
+                        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                        if (!unsubEmail.trim()) { setUnsubError('Please enter your email'); return }
+                        if (!re.test(unsubEmail)) { setUnsubError('Please enter a valid email'); return }
+                        setUnsubDone(true)
+                      }}}
+                      placeholder="you@example.com"
+                      style={{ width: '100%', fontSize: 13, padding: '10px 12px', border: `1px solid ${unsubError ? '#dc2626' : '#d1d5db'}`, borderRadius: 8, outline: 'none', boxSizing: 'border-box', background: unsubError ? '#fff5f5' : '#fff' }} />
+                    {unsubError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>⚠ {unsubError}</div>}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 22px', borderTop: '1px solid #e5e7eb', background: '#fafafa' }}>
+              <button onClick={() => setUnsubOpen(false)} style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>
+                {unsubDone ? 'Close' : 'Cancel'}
+              </button>
+              {!unsubDone && (
+                <button onClick={() => {
+                  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                  if (!unsubEmail.trim()) { setUnsubError('Please enter your email'); return }
+                  if (!re.test(unsubEmail)) { setUnsubError('Please enter a valid email'); return }
+                  setUnsubDone(true)
+                }} style={{ height: 36, padding: '0 18px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, background: '#dc2626', color: '#fff', cursor: 'pointer' }}>
+                  Confirm Unsubscribe
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save search modal */}
       {saveModalOpen && (
