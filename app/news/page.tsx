@@ -868,6 +868,9 @@ export default function CAGovNewsHomepage() {
   const [subFreqs, setSubFreqs]             = useState(['realtime','daily','weekly'])
   const [subFreqError, setSubFreqError]     = useState(false)
   const [subTopics, setSubTopics]           = useState([])
+  const [subTopicsOpen, setSubTopicsOpen]   = useState(false)
+  const [subSaving, setSubSaving]           = useState(false)
+  const [subSaveError, setSubSaveError]     = useState('')
   const [subNewsLevels, setSubNewsLevels]   = useState(['state','county','city'])
   const [subNewsLevelError, setSubNewsLevelError] = useState(false)
   const [subPrimaryCounty, setSubPrimaryCounty] = useState('')
@@ -1373,24 +1376,51 @@ export default function CAGovNewsHomepage() {
                     {subFreqError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 5 }}>⚠ You must select at least one delivery frequency</div>}
                   </div>
 
-                  {/* Topics */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
-                      Topics
-                      <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(optional — leave blank for all)</span>
-                    </label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {['Public Safety','Health','Environment','Housing','Technology','Budget','Education','Wildfire','Insurance','Climate','Energy','Veterans','Civil Rights','Elections'].map(t => {
-                        const on = subTopics.includes(t)
-                        return (
-                          <button key={t} onClick={() => setSubTopics(prev => on ? prev.filter(x => x !== t) : [...prev, t])}
-                            style={{ padding: '5px 10px', fontSize: 12, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .12s' }}>
-                            {t}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  {/* Topics — checkbox dropdown */}
+                  {(() => {
+                    const ALL_TOPICS = ['Public Safety','Health','Environment','Housing','Technology','Budget','Education','Wildfire','Insurance','Climate','Energy','Veterans','Civil Rights','Elections']
+                    return (
+                      <div style={{ position: 'relative' }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                          Topics
+                          <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(optional — leave blank for all)</span>
+                        </label>
+                        <button type="button" onClick={() => setSubTopicsOpen(v => !v)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, padding: '9px 11px', border: `1px solid ${subTopicsOpen || subTopics.length > 0 ? '#1b3a6b' : '#dde3ec'}`, borderRadius: 7, background: subTopics.length > 0 ? '#eef2ff' : '#fff', color: subTopics.length > 0 ? '#1b3a6b' : '#9ca3af', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                          <span style={{ fontWeight: subTopics.length > 0 ? 600 : 400 }}>
+                            {subTopics.length === 0 ? 'All topics (no filter)' : subTopics.length === 1 ? subTopics[0] : `${subTopics.length} topics selected`}
+                          </span>
+                          <span style={{ fontSize: 10, color: '#9ca3af' }}>{subTopicsOpen ? '▲' : '▼'}</span>
+                        </button>
+                        {subTopicsOpen && (
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300, background: '#fff', border: '1px solid #dde3ec', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,.10)', marginTop: 3, overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
+                              <button onClick={() => setSubTopics([...ALL_TOPICS])} style={{ fontSize: 11, color: '#1b3a6b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Select all</button>
+                              <span style={{ color: '#e5e7eb' }}>|</span>
+                              <button onClick={() => setSubTopics([])} style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear (all topics)</button>
+                              {subTopics.length > 0 && <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{subTopics.length} selected</span>}
+                            </div>
+                            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                              {ALL_TOPICS.map(t => {
+                                const on = subTopics.includes(t)
+                                return (
+                                  <div key={t} onClick={() => setSubTopics(prev => on ? prev.filter(x => x !== t) : [...prev, t])}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer', background: on ? '#eef2ff' : 'transparent', fontSize: 13, color: on ? '#1b3a6b' : '#374151' }}
+                                    onMouseEnter={e => { if (!on) e.currentTarget.style.background = '#f8fafc' }}
+                                    onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent' }}>
+                                    <div style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0, border: `2px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      {on && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                                    </div>
+                                    <span style={{ fontWeight: on ? 500 : 400 }}>{t}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {/* News levels */}
                   <div>
@@ -1488,11 +1518,46 @@ export default function CAGovNewsHomepage() {
                         if (subFreqs.length === 0) { setSubFreqError(true); valid = false }
                         if (subNewsLevels.length === 0) { setSubNewsLevelError(true); valid = false }
                         if (!valid) return
-                        setSubDone(true)
+                        setSubSaving(true)
+                        setSubSaveError('')
+                        try {
+                          // Save subscriber to Supabase
+                          const { error: insertError } = await supabase
+                            .from('subscribers')
+                            .upsert({
+                              email: subEmail.trim().toLowerCase(),
+                              first_name: subFirstName.trim(),
+                              last_name: subLastName.trim(),
+                              primary_county: subPrimaryCounty,
+                              extra_counties: subExtraCounties,
+                              topics: subTopics,
+                              news_levels: subNewsLevels,
+                              frequencies: subFreqs,
+                              agreed_at: new Date().toISOString(),
+                              active: true,
+                            }, { onConflict: 'email' })
+                          if (insertError) throw new Error(insertError.message)
+
+                          // Send confirmation email via Supabase Edge Function
+                          await supabase.functions.invoke('send-confirmation', {
+                            body: {
+                              email: subEmail.trim(),
+                              firstName: subFirstName.trim(),
+                              county: subPrimaryCounty,
+                              frequencies: subFreqs,
+                            }
+                          })
+                          setSubDone(true)
+                        } catch(err) {
+                          setSubSaveError('Something went wrong. Please try again.')
+                        } finally {
+                          setSubSaving(false)
+                        }
                       }}
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, cursor: canSubmit ? 'pointer' : 'default', background: canSubmit ? '#f5a623' : '#e5e7eb', color: canSubmit ? '#1b3a6b' : '#9ca3af', transition: 'background .12s' }}>
-                      Subscribe →
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 7, cursor: (canSubmit && !subSaving) ? 'pointer' : 'default', background: (canSubmit && !subSaving) ? '#f5a623' : '#e5e7eb', color: (canSubmit && !subSaving) ? '#1b3a6b' : '#9ca3af', opacity: subSaving ? 0.7 : 1, transition: 'background .12s' }}>
+                      {subSaving ? 'Saving…' : 'Subscribe →'}
                     </button>
+                    {subSaveError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 6, textAlign: 'right' }}>⚠ {subSaveError}</div>}
                   </div>
                 </div>
               </>
