@@ -872,6 +872,7 @@ export default function CAGovNewsHomepage() {
   const [subNewsLevelError, setSubNewsLevelError] = useState(false)
   const [subPrimaryCounty, setSubPrimaryCounty] = useState('')
   const [subExtraCounties, setSubExtraCounties] = useState([])
+  const [subExtraOpen, setSubExtraOpen]         = useState(false)
   const [subAgreed, setSubAgreed]           = useState(false)
   const [subDone, setSubDone]               = useState(false)
   const [subEmailError, setSubEmailError]   = useState('')
@@ -1296,27 +1297,45 @@ export default function CAGovNewsHomepage() {
                     )}
                   </div>
 
-                  {/* Additional counties */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+                  {/* Additional counties — checkbox dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
                       Also subscribe to additional counties
                       <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(optional)</span>
                     </label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 110, overflowY: 'auto', padding: 2 }}>
-                      {CA_COUNTIES.filter(c => c !== subPrimaryCounty).map(c => {
-                        const on = subExtraCounties.includes(c)
-                        return (
-                          <button key={c} onClick={() => setSubExtraCounties(prev => on ? prev.filter(x => x !== c) : [...prev, c])}
-                            style={{ padding: '4px 9px', fontSize: 11, borderRadius: 20, border: `1px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#f9fafb', color: on ? '#fff' : '#374151', cursor: 'pointer', fontWeight: on ? 600 : 400, transition: 'all .1s', whiteSpace: 'nowrap' }}>
-                            {c}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {subExtraCounties.length > 0 && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280' }}>
-                        {subExtraCounties.length} additional {subExtraCounties.length === 1 ? 'county' : 'counties'} selected
-                        <button onClick={() => setSubExtraCounties([])} style={{ marginLeft: 8, fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear all</button>
+                    <button
+                      type="button"
+                      onClick={() => setSubExtraOpen(v => !v)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, padding: '9px 11px', border: `1px solid ${subExtraOpen || subExtraCounties.length > 0 ? '#1b3a6b' : '#dde3ec'}`, borderRadius: 7, background: subExtraCounties.length > 0 ? '#eef2ff' : '#fff', color: subExtraCounties.length > 0 ? '#1b3a6b' : '#9ca3af', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      <span style={{ fontWeight: subExtraCounties.length > 0 ? 600 : 400 }}>
+                        {subExtraCounties.length === 0 ? 'Select additional counties…' : `${subExtraCounties.length} additional ${subExtraCounties.length === 1 ? 'county' : 'counties'} selected`}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#9ca3af' }}>{subExtraOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {subExtraOpen && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300, background: '#fff', border: '1px solid #dde3ec', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,.10)', marginTop: 3, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
+                          <button onClick={() => setSubExtraCounties(CA_COUNTIES.filter(c => c !== subPrimaryCounty))} style={{ fontSize: 11, color: '#1b3a6b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Select all</button>
+                          <span style={{ color: '#e5e7eb' }}>|</span>
+                          <button onClick={() => setSubExtraCounties([])} style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear</button>
+                          {subExtraCounties.length > 0 && <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{subExtraCounties.length} selected</span>}
+                        </div>
+                        <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                          {CA_COUNTIES.filter(c => c !== subPrimaryCounty).map(c => {
+                            const on = subExtraCounties.includes(c)
+                            return (
+                              <div key={c} onClick={() => setSubExtraCounties(prev => on ? prev.filter(x => x !== c) : [...prev, c])}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer', background: on ? '#eef2ff' : 'transparent', fontSize: 13, color: on ? '#1b3a6b' : '#374151' }}
+                                onMouseEnter={e => { if (!on) e.currentTarget.style.background = '#f8fafc' }}
+                                onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent' }}>
+                                <div style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0, border: `2px solid ${on ? '#1b3a6b' : '#d1d5db'}`, background: on ? '#1b3a6b' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {on && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                                </div>
+                                <span style={{ fontWeight: on ? 500 : 400 }}>{c} County</span>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
