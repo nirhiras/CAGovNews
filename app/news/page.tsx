@@ -874,7 +874,8 @@ export default function CAGovNewsHomepage() {
   const [subFreqs, setSubFreqs]             = useState(['realtime','daily','weekly'])
   const [subFreqError, setSubFreqError]     = useState(false)
   const [subTopics, setSubTopics]           = useState([])
-  const [subAgencies, setSubAgencies]       = useState([])
+  const [subNewsLevels, setSubNewsLevels]   = useState(['state','county','city'])
+  const [subNewsLevelError, setSubNewsLevelError] = useState(false)
   const [subPrimaryCounty, setSubPrimaryCounty] = useState('')
   const [subExtraCounties, setSubExtraCounties] = useState([])
   const [subAgreed, setSubAgreed]           = useState(false)
@@ -1203,7 +1204,7 @@ export default function CAGovNewsHomepage() {
           'Solano','Sonoma','Stanislaus','Sutter','Tehama','Trinity','Tulare',
           'Tuolumne','Ventura','Yolo','Yuba'
         ]
-        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed && subFreqs.length > 0
+        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed && subFreqs.length > 0 && subNewsLevels.length > 0
         return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => e.target === e.currentTarget && setSubOpen(false)}>
@@ -1226,7 +1227,7 @@ export default function CAGovNewsHomepage() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#1b3a6b' }}>You&apos;re subscribed!</div>
                 <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, maxWidth: 360 }}>
                   A confirmation email is on its way to <strong>{subEmail}</strong>.<br/>
-                  You&apos;ll receive your {subFreqs.join(', ')} digest covering <strong>{subPrimaryCounty} County</strong>
+                  You&apos;ll receive your {subFreqs.join(' + ')} digest for <strong>{subNewsLevels.map(l => l.charAt(0).toUpperCase() + l.slice(1)).join(', ')} News</strong> covering <strong>{subPrimaryCounty} County</strong>
                   {subExtraCounties.length > 0 && ` and ${subExtraCounties.length} additional county${subExtraCounties.length > 1 ? 'ies' : 'y'}`}.
                 </div>
                 <button onClick={() => setSubOpen(false)} style={{ marginTop: 8, padding: '10px 24px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Done</button>
@@ -1354,6 +1355,40 @@ export default function CAGovNewsHomepage() {
                     </div>
                   </div>
 
+                  {/* News levels */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+                      News coverage level
+                      <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 4 }}>(all selected by default — uncheck any you don&apos;t want)</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { val: 'state',  label: '🏛️ State News',  desc: 'Statewide agencies & Governor' },
+                        { val: 'county', label: '📍 County News', desc: 'Your selected counties' },
+                        { val: 'city',   label: '🏙️ City News',   desc: 'All cities in your counties' },
+                      ].map(lvl => {
+                        const on = subNewsLevels.includes(lvl.val)
+                        return (
+                          <div key={lvl.val}
+                            onClick={() => {
+                              setSubNewsLevelError(false)
+                              setSubNewsLevels(prev => {
+                                if (on && prev.length === 1) { setSubNewsLevelError(true); return prev }
+                                return on ? prev.filter(x => x !== lvl.val) : [...prev, lvl.val]
+                              })
+                            }}
+                            style={{ flex: 1, padding: '11px 8px', border: `2px solid ${on ? '#1b3a6b' : '#e5e7eb'}`, borderRadius: 9, cursor: 'pointer', textAlign: 'center', background: on ? '#eef2ff' : '#fafafa', transition: 'all .12s', position: 'relative', userSelect: 'none' }}>
+                            {on && <span style={{ position: 'absolute', top: 6, right: 8, fontSize: 11, color: '#1b3a6b', fontWeight: 700 }}>✓</span>}
+                            <div style={{ fontSize: 18, marginBottom: 4 }}>{lvl.label.split(' ')[0]}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: on ? '#1b3a6b' : '#9ca3af' }}>{lvl.label.split(' ').slice(1).join(' ')}</div>
+                            <div style={{ fontSize: 11, color: on ? '#6b7280' : '#d1d5db', marginTop: 2, lineHeight: 1.3 }}>{lvl.desc}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {subNewsLevelError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 5 }}>⚠ Please keep at least one coverage level selected</div>}
+                  </div>
+
                   {/* Privacy statement */}
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '14px 16px' }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8 }}>🔒 Privacy &amp; Terms</div>
@@ -1399,6 +1434,7 @@ export default function CAGovNewsHomepage() {
                   <div style={{ fontSize: 11, color: '#9ca3af' }}>
                     {subPrimaryCounty && <span>📍 {subPrimaryCounty}{subExtraCounties.length > 0 ? ` +${subExtraCounties.length}` : ''}</span>}
                     {subTopics.length > 0 && <span> · {subTopics.length} topic{subTopics.length > 1 ? 's' : ''}</span>}
+                    {subNewsLevels.length < 3 && <span> · {subNewsLevels.join(', ')}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => setSubOpen(false)} style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
@@ -1411,6 +1447,7 @@ export default function CAGovNewsHomepage() {
                         if (!subPrimaryCounty) { setSubCountyError('Please select your county'); valid = false }
                         if (!subAgreed) { setSubAgreeError(true); valid = false }
                         if (subFreqs.length === 0) { setSubFreqError(true); valid = false }
+                        if (subNewsLevels.length === 0) { setSubNewsLevelError(true); valid = false }
                         if (!valid) return
                         setSubDone(true)
                       }}
