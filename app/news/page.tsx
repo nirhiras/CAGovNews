@@ -1191,7 +1191,10 @@ export default function CAGovNewsHomepage() {
             <span style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>Contact</span>
             <span style={{ color: '#93c5fd', fontSize: '11px', cursor: 'pointer' }}>RSS</span>
           </div>
-        </d      {/* ── Subscribe modal ── */}
+        </div>
+      </div>
+
+      {/* ── Subscribe modal ── */}
       {subOpen && (() => {
         const CA_COUNTIES = [
           'Alameda','Alpine','Amador','Butte','Calaveras','Colusa','Contra Costa',
