@@ -625,26 +625,42 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
           ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading article...</div>
           : content?.scrape_status === 'ok' && (content.raw_html || content.extracted_text)
           ? (() => {
-              // Prefer raw_html for rich formatting; fall back to extracted_text
-              const hasHtml = content.raw_html && content.raw_html.trim().length > 100
-              if (hasHtml) {
+              // Use extracted_text (clean prose) with basic formatting
+              // raw_html contains full page chrome; extracted_text is the clean article body
+              const text = content.extracted_text || ''
+              const hasText = text.trim().length > 50
+
+              if (hasText) {
+                // Convert plain text to paragraphs — split on double newlines
+                const paragraphs = text.split(/\n{2,}/).filter((p: string) => p.trim().length > 0)
                 return (
-                  <div
-                    className="article-content"
-                    style={{
-                      fontSize: '15px', color: '#1a1a1a', lineHeight: 1.8,
-                      fontFamily: "'Source Serif 4', Georgia, serif",
-                    }}
-                    dangerouslySetInnerHTML={{ __html: content.raw_html }}
-                  />
+                  <div style={{ fontSize: '15px', color: '#1a1a1a', lineHeight: 1.8, fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                    {paragraphs.map((para: string, i: number) => {
+                      const trimmed = para.trim()
+                      // Detect bullet-like lines
+                      if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                        const items = trimmed.split('\n').filter((l: string) => l.trim())
+                        return (
+                          <ul key={i} style={{ paddingLeft: 22, marginBottom: 14 }}>
+                            {items.map((item: string, j: number) => (
+                              <li key={j} style={{ marginBottom: 5 }}>{item.replace(/^[•\-\*]\s*/, '')}</li>
+                            ))}
+                          </ul>
+                        )
+                      }
+                      return <p key={i} style={{ marginBottom: 14 }}>{trimmed}</p>
+                    })}
+                  </div>
                 )
               }
-              // Plain text fallback
-              return (
-                <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'system-ui, sans-serif' }}>
-                  {content.extracted_text}
-                </div>
-              )
+
+              // Last resort: raw_html stripped of tags
+              if (content.raw_html) {
+                const stripped = content.raw_html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+                return <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8 }}>{stripped.slice(0, 5000)}</div>
+              }
+
+              return null
             })()
           : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>
               Full article content will be available after the next crawler run.
