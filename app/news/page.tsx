@@ -382,11 +382,11 @@ function TagBadge({ tag }) {
 
 // ── NewsCard ──────────────────────────────────────────────────
 
-function NewsCard({ release, onClick, isFav, onToggleFav }) {
+function NewsCard({ release, onClick, isFav, onToggleFav, isSelected = false }) {
   const agencyColor = AGENCY_COLORS[release.agency_slug] ?? '#1a5276'
   return (
     <div
-      style={{ background: '#fff', border: '0.5px solid #d1d9e6', borderLeft: `3px solid ${agencyColor}`, borderRadius: '0 6px 6px 0', padding: '14px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s', position: 'relative' }}
+      style={{ background: isSelected ? '#eef3fb' : '#fff', border: `0.5px solid ${isSelected ? '#1b3a6b' : '#d1d9e6'}`, borderLeft: `3px solid ${agencyColor}`, borderRadius: '0 6px 6px 0', padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative' }}
       onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
       onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
     >
@@ -437,7 +437,7 @@ function AbBtn({ onClick, href, target, title, active, activeStyle, children, da
 
 // ── Article Modal ─────────────────────────────────────────────
 
-function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favArticles, setFavArticles }) {
+function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favArticles, setFavArticles }) {
   const [content, setContent]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [toast, setToast]       = useState('')
@@ -546,11 +546,7 @@ function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favAr
   const liUrl  = `https://www.linkedin.com/sharing/share-offsite/?url=${eUrl}`
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{ background: '#fff', borderRadius: '10px', maxWidth: '760px', width: '100%', padding: '28px 32px', position: 'relative' }}>
+    <div style={{ padding: '22px 26px', position: 'relative' }}>
 
         {/* Close */}
         <button onClick={onClose} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' }}>✕</button>
@@ -639,8 +635,6 @@ function ArticleModal({ release, onClose, savedArticles, setSavedArticles, favAr
             View original on {url.replace(/https?:\/\//, '').split('/')[0]} ↗
           </a>
         </div>
-      </div>
-
       {/* Feedback modal */}
       {fbOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
@@ -1155,30 +1149,43 @@ export default function CAGovNewsHomepage() {
         </div>
       </div>
 
-      {/* News feed */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px' }}>
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[...Array(8)].map((_, i) => <div key={i} style={{ background: '#fff', borderRadius: '6px', height: '100px', border: '0.5px solid #d1d9e6' }} />)}
-          </div>
-        ) : releases.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#9aa5b4' }}>
-            <div style={{ fontSize: '32px', marginBottom: 12 }}>{filters.favoritesOnly ? '★' : '🔍'}</div>
-            <div style={{ fontSize: '16px', marginBottom: '8px' }}>{filters.favoritesOnly ? 'No favorites yet' : 'No releases found'}</div>
-            <div style={{ fontSize: '13px', marginBottom: 16 }}>{filters.favoritesOnly ? 'Star articles to add them here.' : 'Try adjusting your filters'}</div>
-            <button onClick={resetFilters} style={{ fontSize: '13px', padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Reset filters</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {releases.map(r => (
-              <NewsCard
-                key={r.id}
-                release={r}
-                onClick={setSelectedRelease}
-                isFav={favArticles.some(a => a.id === r.id)}
-                onToggleFav={toggleFavOnCard}
-              />
-            ))}
+      {/* News feed — split layout */}
+      <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '16px 20px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+
+        {/* Left: article list */}
+        <div style={{ width: selectedRelease ? 400 : '100%', minWidth: selectedRelease ? 340 : undefined, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {loading ? (
+            [...Array(8)].map((_, i) => <div key={i} style={{ background: '#fff', borderRadius: 6, height: 90, border: '0.5px solid #d1d9e6' }} />)
+          ) : releases.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9aa5b4' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>{filters.favoritesOnly ? '★' : '🔍'}</div>
+              <div style={{ fontSize: 16, marginBottom: 8 }}>{filters.favoritesOnly ? 'No favorites yet' : 'No releases found'}</div>
+              <div style={{ fontSize: 13, marginBottom: 16 }}>{filters.favoritesOnly ? 'Star articles to add them here.' : 'Try adjusting your filters'}</div>
+              <button onClick={resetFilters} style={{ fontSize: 13, padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>Reset filters</button>
+            </div>
+          ) : releases.map(r => (
+            <NewsCard
+              key={r.id}
+              release={r}
+              onClick={setSelectedRelease}
+              isFav={favArticles.some(a => a.id === r.id)}
+              onToggleFav={toggleFavOnCard}
+              isSelected={selectedRelease?.id === r.id}
+            />
+          ))}
+        </div>
+
+        {/* Right: inline article reader */}
+        {selectedRelease && (
+          <div style={{ flex: 1, minWidth: 0, position: 'sticky', top: 70, maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', background: '#fff', borderRadius: 10, border: '0.5px solid #d1d9e6', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+            <InlineArticle
+              release={selectedRelease}
+              onClose={() => setSelectedRelease(null)}
+              savedArticles={savedArticles}
+              setSavedArticles={setSavedArticles}
+              favArticles={favArticles}
+              setFavArticles={setFavArticles}
+            />
           </div>
         )}
       </div>
