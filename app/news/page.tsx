@@ -625,41 +625,50 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
           ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading article...</div>
           : content?.scrape_status === 'ok' && (content.raw_html || content.extracted_text)
           ? (() => {
-              // Use extracted_text (clean prose) with basic formatting
-              // raw_html contains full page chrome; extracted_text is the clean article body
-              const text = content.extracted_text || ''
-              const hasText = text.trim().length > 50
-
-              if (hasText) {
-                // Convert plain text to paragraphs — split on double newlines
-                const paragraphs = text.split(/\n{2,}/).filter((p: string) => p.trim().length > 0)
+              // Sanitise raw_html — extract just the article body, strip nav/chrome
+              if (content.raw_html && content.raw_html.trim().length > 200) {
+                const sanitised = content.raw_html
+                  // Remove script/style/nav/header/footer blocks entirely
+                  .replace(/<script[\s\S]*?<\/script>/gi, '')
+                  .replace(/<style[\s\S]*?<\/style>/gi, '')
+                  .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+                  .replace(/<header[\s\S]*?<\/header>/gi, '')
+                  .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+                  .replace(/<aside[\s\S]*?<\/aside>/gi, '')
+                  // Strip class/id/style attrs to remove source site styling
+                  .replace(/\s(class|id|style|onclick|onload)="[^"]*"/gi, '')
+                  .replace(/\s(class|id|style|onclick|onload)='[^']*'/gi, '')
+                  // Remove empty tags
+                  .replace(/<(div|span|p|section|article)[^>]*>\s*<\/\1>/gi, '')
+                  .trim()
+                return (
+                  <div
+                    className="article-content"
+                    style={{ fontSize: '15px', color: '#1a1a1a', lineHeight: 1.8, fontFamily: "'Source Serif 4', Georgia, serif" }}
+                    dangerouslySetInnerHTML={{ __html: sanitised }}
+                  />
+                )
+              }
+              // Fallback: render extracted_text as paragraphs
+              const text = (content.extracted_text || '').trim()
+              if (text.length > 50) {
+                // Split into sentences to create readable paragraphs (~4 sentences each)
+                const sentences = text.match(/[^.!?]+[.!?]+["']?\s*/g) || [text]
+                const paragraphs: string[] = []
+                let current = ''
+                sentences.forEach((s: string, i: number) => {
+                  current += s
+                  if ((i + 1) % 4 === 0 || i === sentences.length - 1) {
+                    if (current.trim()) paragraphs.push(current.trim())
+                    current = ''
+                  }
+                })
                 return (
                   <div style={{ fontSize: '15px', color: '#1a1a1a', lineHeight: 1.8, fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                    {paragraphs.map((para: string, i: number) => {
-                      const trimmed = para.trim()
-                      // Detect bullet-like lines
-                      if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                        const items = trimmed.split('\n').filter((l: string) => l.trim())
-                        return (
-                          <ul key={i} style={{ paddingLeft: 22, marginBottom: 14 }}>
-                            {items.map((item: string, j: number) => (
-                              <li key={j} style={{ marginBottom: 5 }}>{item.replace(/^[•\-\*]\s*/, '')}</li>
-                            ))}
-                          </ul>
-                        )
-                      }
-                      return <p key={i} style={{ marginBottom: 14 }}>{trimmed}</p>
-                    })}
+                    {paragraphs.map((p: string, i: number) => <p key={i} style={{ marginBottom: 16 }}>{p}</p>)}
                   </div>
                 )
               }
-
-              // Last resort: raw_html stripped of tags
-              if (content.raw_html) {
-                const stripped = content.raw_html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-                return <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8 }}>{stripped.slice(0, 5000)}</div>
-              }
-
               return null
             })()
           : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>
