@@ -1521,35 +1521,26 @@ export default function CAGovNewsHomepage() {
                         setSubSaving(true)
                         setSubSaveError('')
                         try {
-                          // Save subscriber to Supabase
-                          const { error: insertError } = await supabase
-                            .from('subscribers')
-                            .upsert({
-                              email: subEmail.trim().toLowerCase(),
-                              first_name: subFirstName.trim(),
-                              last_name: subLastName.trim(),
-                              primary_county: subPrimaryCounty,
-                              extra_counties: subExtraCounties,
-                              topics: subTopics,
-                              news_levels: subNewsLevels,
-                              frequencies: subFreqs,
-                              agreed_at: new Date().toISOString(),
-                              active: true,
-                            }, { onConflict: 'email' })
-                          if (insertError) throw new Error(insertError.message)
-
-                          // Send confirmation email via Supabase Edge Function
-                          await supabase.functions.invoke('send-confirmation', {
-                            body: {
+                          const res = await fetch('/api/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
                               email: subEmail.trim(),
                               firstName: subFirstName.trim(),
-                              county: subPrimaryCounty,
+                              lastName: subLastName.trim(),
+                              primaryCounty: subPrimaryCounty,
+                              extraCounties: subExtraCounties,
+                              topics: subTopics,
+                              newsLevels: subNewsLevels,
                               frequencies: subFreqs,
-                            }
+                              agreedAt: new Date().toISOString(),
+                            })
                           })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error || 'Subscription failed')
                           setSubDone(true)
-                        } catch(err) {
-                          setSubSaveError('Something went wrong. Please try again.')
+                        } catch(err: any) {
+                          setSubSaveError(err.message || 'Something went wrong. Please try again.')
                         } finally {
                           setSubSaving(false)
                         }
