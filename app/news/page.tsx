@@ -1506,7 +1506,7 @@ export default function CAGovNewsHomepage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => setSubOpen(false)} style={{ height: 36, padding: '0 16px', fontSize: 13, border: '1px solid #dde3ec', background: '#fff', color: '#555', borderRadius: 7, cursor: 'pointer' }}>Cancel</button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         let valid = true
                         const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
                         if (!subFirstName.trim()) { setSubFirstNameError('First name is required'); valid = false }
