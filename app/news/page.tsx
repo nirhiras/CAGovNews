@@ -1365,7 +1365,7 @@ export default function CAGovNewsHomepage() {
                       {[
                         { val: 'state',  label: '🏛️ State News',  desc: 'Statewide agencies & Governor' },
                         { val: 'county', label: '📍 County News', desc: 'Your selected counties' },
-                        { val: 'city',   label: '🏙️ City News',   desc: 'All cities in your counties' },
+                        { val: 'city',   label: '🏙️ City News',   desc: 'All cities in your selected counties' },
                       ].map(lvl => {
                         const on = subNewsLevels.includes(lvl.val)
                         return (
