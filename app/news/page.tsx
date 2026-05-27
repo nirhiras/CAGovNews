@@ -881,6 +881,8 @@ export default function CAGovNewsHomepage() {
   const [subAgreed, setSubAgreed]           = useState(false)
   const [subDone, setSubDone]               = useState(false)
   const [subEmailError, setSubEmailError]   = useState('')
+  const [subFirstNameError, setSubFirstNameError] = useState('')
+  const [subLastNameError, setSubLastNameError]   = useState('')
   const [subCountyError, setSubCountyError] = useState('')
   const [subAgreeError, setSubAgreeError]   = useState(false)
   const [saveName, setSaveName]           = useState('')
@@ -1207,7 +1209,7 @@ export default function CAGovNewsHomepage() {
           'Solano','Sonoma','Stanislaus','Sutter','Tehama','Trinity','Tulare',
           'Tuolumne','Ventura','Yolo','Yuba'
         ]
-        const canSubmit = subEmail.trim() && subPrimaryCounty && subAgreed && subFreqs.length > 0 && subNewsLevels.length > 0
+        const canSubmit = subFirstName.trim() && subLastName.trim() && subEmail.trim() && subPrimaryCounty && subAgreed && subFreqs.length > 0 && subNewsLevels.length > 0
         return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => e.target === e.currentTarget && setSubOpen(false)}>
@@ -1242,14 +1244,20 @@ export default function CAGovNewsHomepage() {
                   {/* Name row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>First name</label>
-                      <input type="text" value={subFirstName} onChange={e => setSubFirstName(e.target.value)} placeholder="Jane"
-                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                        First name <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <input type="text" value={subFirstName} onChange={e => { setSubFirstName(e.target.value); if (subFirstNameError) setSubFirstNameError('') }} placeholder="Jane"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subFirstNameError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subFirstNameError ? '#fff5f5' : '#fff' }} />
+                      {subFirstNameError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subFirstNameError}</div>}
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>Last name</label>
-                      <input type="text" value={subLastName} onChange={e => setSubLastName(e.target.value)} placeholder="Smith"
-                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: '1px solid #dde3ec', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }} />
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>
+                        Last name <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <input type="text" value={subLastName} onChange={e => { setSubLastName(e.target.value); if (subLastNameError) setSubLastNameError('') }} placeholder="Smith"
+                        style={{ width: '100%', fontSize: 13, padding: '9px 11px', border: `1px solid ${subLastNameError ? '#dc2626' : '#dde3ec'}`, borderRadius: 7, outline: 'none', boxSizing: 'border-box', background: subLastNameError ? '#fff5f5' : '#fff' }} />
+                      {subLastNameError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>⚠ {subLastNameError}</div>}
                     </div>
                   </div>
 
@@ -1445,6 +1453,8 @@ export default function CAGovNewsHomepage() {
                       onClick={() => {
                         let valid = true
                         const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                        if (!subFirstName.trim()) { setSubFirstNameError('First name is required'); valid = false }
+                        if (!subLastName.trim()) { setSubLastNameError('Last name is required'); valid = false }
                         if (!subEmail.trim()) { setSubEmailError('Email is required'); valid = false }
                         else if (!emailRe.test(subEmail.trim())) { setSubEmailError('Please enter a valid email'); valid = false }
                         if (!subPrimaryCounty) { setSubCountyError('Please select your county'); valid = false }
