@@ -458,7 +458,7 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
   const isFav   = favArticles.some(a => a.id === release.id)
 
   useEffect(() => {
-    supabase.from('release_content').select('extracted_text, scrape_status').eq('release_id', release.id).single()
+    supabase.from('release_content').select('raw_html, extracted_text, extracted_markdown, scrape_status').eq('release_id', release.id).single()
       .then(({ data }) => { setContent(data); setLoading(false) })
   }, [release.id])
 
@@ -622,10 +622,33 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
         {/* Article body */}
         <hr style={{ border: 'none', borderTop: '0.5px solid #e5e7eb', margin: '0 0 20px' }} />
         {loading
-          ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading full article...</div>
-          : content?.extracted_text && content.scrape_status === 'ok'
-          ? <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{content.extracted_text.slice(0, 4000)}{content.extracted_text.length > 4000 && '…'}</div>
-          : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>Full article content will be available after the next crawler run.</div>
+          ? <div style={{ color: '#9aa5b4', fontSize: '13px' }}>Loading article...</div>
+          : content?.scrape_status === 'ok' && (content.raw_html || content.extracted_text)
+          ? (() => {
+              // Prefer raw_html for rich formatting; fall back to extracted_text
+              const hasHtml = content.raw_html && content.raw_html.trim().length > 100
+              if (hasHtml) {
+                return (
+                  <div
+                    className="article-content"
+                    style={{
+                      fontSize: '15px', color: '#1a1a1a', lineHeight: 1.8,
+                      fontFamily: "'Source Serif 4', Georgia, serif",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: content.raw_html }}
+                  />
+                )
+              }
+              // Plain text fallback
+              return (
+                <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'system-ui, sans-serif' }}>
+                  {content.extracted_text}
+                </div>
+              )
+            })()
+          : <div style={{ background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>
+              Full article content will be available after the next crawler run.
+            </div>
         }
 
         {/* View original */}
