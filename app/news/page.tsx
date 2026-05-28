@@ -2,6 +2,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -371,8 +373,9 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
   }
 
   const eTitle = encodeURIComponent(title)
-  const eUrl   = encodeURIComponent(url)
-  const mailto = `mailto:?subject=CAGovNews%3A%20${eTitle}&body=Read%20this%20article%3A%20${eUrl}`
+  const caGovNewsUrl = `https://cagovnews.com/news/${release.id}`
+  const eUrl   = encodeURIComponent(caGovNewsUrl)
+  const mailto = `mailto:?subject=CAGovNews%3A%20${eTitle}&body=Read%20this%20article%20on%20CAGovNews%3A%20${eUrl}`
   const xUrl   = `https://twitter.com/intent/tweet?text=${eTitle}&url=${eUrl}`
   const liUrl  = `https://www.linkedin.com/sharing/share-offsite/?url=${eUrl}`
 
@@ -389,6 +392,11 @@ function InlineArticle({ release, onClose, savedArticles, setSavedArticles, favA
         <button onClick={onClose} style={{ position: isMobile ? 'relative' : 'absolute', top: isMobile ? 0 : '14px', right: isMobile ? 'auto' : '16px', background: 'none', border: 'none', fontSize: isMobile ? '14px' : '20px', cursor: 'pointer', color: '#1b3a6b', fontWeight: 600, padding: isMobile ? '0 0 14px 0' : 0, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
           {isMobile ? '← Back to list' : '✕'}
         </button>
+
+        {/* Link to dedicated article page */}
+        <div style={{ marginBottom: 8 }}>
+          <a href={`/news/${release.id}`} style={{ fontSize: 11, color: '#1b3a6b', textDecoration: 'none', fontWeight: 500 }}>🔗 cagovnews.com/news/{release.id}</a>
+        </div>
 
         {/* Action bar */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', paddingBottom: 14, marginBottom: 16, borderBottom: '0.5px solid #e5e7eb' }}>
@@ -517,6 +525,8 @@ export default function CAGovNewsHomepage() {
   const [loading, setLoading]             = useState(true)
   const [totalCount, setTotalCount]       = useState(0)
   const [selectedRelease, setSelectedRelease] = useState(null)
+  const selectRelease = (r) => { setSelectedRelease(r); if (typeof window !== 'undefined') window.history.pushState({}, '', `/news/${r.id}`) }
+  const closeRelease = () => { setSelectedRelease(null); if (typeof window !== 'undefined') window.history.pushState({}, '', '/news') }
   const [filters, setFilters]             = useState(EMPTY_FILTERS)
   const [filterOpen, setFilterOpen]       = useState(false)
   const [saveModalOpen, setSaveModalOpen] = useState(false)
@@ -553,6 +563,7 @@ export default function CAGovNewsHomepage() {
   const [favArticles, setFavArticles]     = useState([])
 
   const isMobile = useIsMobile()
+  const router = useRouter()
   const setF = (key, val) => setFilters(f => ({ ...f, [key]: val }))
 
   useEffect(() => {
@@ -713,7 +724,7 @@ export default function CAGovNewsHomepage() {
                   <div style={{ fontSize: 13, marginBottom: 16 }}>{filters.favoritesOnly ? 'Star articles to add them here.' : 'Try adjusting your filters'}</div>
                   <button onClick={resetFilters} style={{ fontSize: 13, padding: '8px 18px', border: '1px solid #d1d9e6', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>Reset filters</button>
                 </div>
-              : releases.map(r => <NewsCard key={r.id} release={r} onClick={setSelectedRelease} isFav={favArticles.some(a => a.id === r.id)} onToggleFav={toggleFavOnCard} isSelected={selectedRelease?.id === r.id} />)
+              : releases.map(r => <NewsCard key={r.id} release={r} onClick={selectRelease} isFav={favArticles.some(a => a.id === r.id)} onToggleFav={toggleFavOnCard} isSelected={selectedRelease?.id === r.id} />)
             }
           </div>
         )}
@@ -722,7 +733,7 @@ export default function CAGovNewsHomepage() {
         {selectedRelease && (
           <InlineArticle
             release={selectedRelease}
-            onClose={() => setSelectedRelease(null)}
+            onClose={closeRelease}
             savedArticles={savedArticles}
             setSavedArticles={setSavedArticles}
             favArticles={favArticles}
